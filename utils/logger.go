@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Formatter implements logrus.Formatter interface.
 type formatter struct {
 	prefix string
 }
@@ -44,7 +43,6 @@ func GetLogger() *logrus.Logger {
 	return logger
 }
 
-// Format building log message.
 func (f *formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var sb bytes.Buffer
 	sb.WriteString(strings.ToUpper(entry.Level.String()))

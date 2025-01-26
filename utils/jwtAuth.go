@@ -26,21 +26,12 @@ var (
 )
 
 type CustomClaims struct {
-	Role           string `json:"role,omitempty"`
-	ID             string `json:"id,omitempty"` // uuid of the user
-	IsPartial      bool   `json:"is_partial,omitempty"`
-	UploadCategory string `json:"upload_category,omitempty"`
-	ApprovalID     string `json:"approval_id,omitempty"`
-
-	// RefundClaimToken
-	RefundUUID     string `json:"refund_uuid,omitempty"`
-	RefundMode     string `json:"refund_mode,omitempty"`
-	PhoneNumber    string `json:"phone_number,omitempty"`
-	Email          string `json:"email,omitempty"`
-	AccountUUID    string `json:"account_uuid,omitempty"`
-	ShopifyOrderID string `json:"shopify_order_id,omitempty"`
-	EmailID        uint   `json:"email_id,omitempty"`
-	ProductID      string `json:"pid,omitempty"`
+	Role        uint   `json:"role"`
+	IsPartial   bool   `json:"is_partial,omitempty"`
+	PhoneNumber string `json:"phone_number,omitempty"`
+	Email       string `json:"email,omitempty"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
 }
 
 type JWTTokenClaims struct {
@@ -48,9 +39,7 @@ type JWTTokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewTokenWithClaims(secretKey []byte, customClaims CustomClaims,
-	expires time.Time) (*string, error) {
-
+func NewTokenWithClaims(secretKey []byte, customClaims CustomClaims, expires time.Time) (*string, error) {
 	claims := JWTTokenClaims{
 		customClaims,
 		jwt.RegisteredClaims{
@@ -58,7 +47,7 @@ func NewTokenWithClaims(secretKey []byte, customClaims CustomClaims,
 			ExpiresAt: jwt.NewNumericDate(expires),
 		},
 	}
-	// Create token
+	// Create token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Signed string
 	signedString, err := token.SignedString(secretKey)

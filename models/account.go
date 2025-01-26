@@ -28,6 +28,16 @@ type Account struct {
 
 	Emails      []*Email     `gorm:"many2many:account_emails" json:"emails,omitempty"`
 	Credentials []Credential `json:"-"`
+	Role        uint         `json:"role"`
+}
+
+func GetAccountByPhoneNumber(db *gorm.DB, phoneNumber string) (*Account, error) {
+	var account Account
+	err := db.Where("phone_number = ?", phoneNumber).First(&account).Error
+	if err != nil {
+		return nil, err
+	}
+	return &account, nil
 }
 
 type accountRepo struct {
