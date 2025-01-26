@@ -1,0 +1,55 @@
+package models
+
+import (
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+type IAccount interface {
+	GetByID(userID uint) (*Account, error)
+	GetByEmail(email string) ([]*Account, error)
+	Get(where *Account) (*Account, error)
+	GetWithTx(tx *gorm.DB, where *Account) (*Account, error)
+	Create(u *Account) error
+	CreateWithTx(tx *gorm.DB, u *Account) error
+	Update(where *Account, a *Account) error
+	UpdateWithTx(tx *gorm.DB, where *Account, a *Account) error
+	Delete(userID uint) error
+	DeleteWithTx(tx *gorm.DB, u *Account) error
+	FindOne(email, phoneNumber, accountUUID string) (*Account, error)
+	GetAllAccountsWithSameMailDomain(tx *gorm.DB, emailDomain string) (*[]Account, error)
+	GetWithCredentials(where *Account, credentialType CredentialsTypeSlug) (*Account, error)
+	CheckAccountAssociatedForTheEmail(accountUUID, email string) (*Email, error)
+	MarkAccountAsNotVerified(where *Account) error
+	BulkInsert(records *[]Account, conds ...clause.Expression) error
+	AddEmails(a *Account, emails []Email) error
+}
+
+type IAuthCredential interface {
+	CreateWithTx(tx *gorm.DB, c *Credential) error
+	Create(c *Credential) error
+	GetWithTx(tx *gorm.DB, where *Credential) (*Credential, error)
+	Get(where *Credential) (*Credential, error)
+	UpdateWithTx(tx *gorm.DB, where *Credential, u *Credential) error
+	Update(where *Credential, u *Credential) error
+	DeleteWithTx(tx *gorm.DB, where *Credential) error
+	Delete(where *Credential) error
+	CheckIfPasswordIsValid(userID uint, password string) (bool, error)
+}
+
+type IEmailRepo interface {
+	Create(i *Email) error
+	CreateWithTx(tx *gorm.DB, i *Email) error
+	Get(where *Email) (*Email, error)
+	GetWithTx(tx *gorm.DB, where *Email) (*Email, error)
+	Update(where *Email, i *Email) error
+	UpdateWithTx(tx *gorm.DB, where *Email, i *Email) error
+	Delete(where *Email) error
+	DeleteWithTx(tx *gorm.DB, where *Email) error
+	GetWithAccount(where *Email) (*Email, error)
+	UpdateEmailToVerified(tx *gorm.DB, accountID uint, email *Email) error
+	CreateAccountEmail(e *Email) (*Email, error)
+	CreateAccountEmailWithTx(tx *gorm.DB, u *Email) (*Email, error)
+	GetAll(where *Email) (*[]Email, error)
+	GetLastEmailOfAccount(accountID uint) (*Email, error)
+}
