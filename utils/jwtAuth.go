@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"ecom/backend/constants"
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -84,4 +86,23 @@ func ParseToken(token string, secretKey []byte, ignoreValidity ...bool) (*Custom
 		}
 	}
 	return nil, errors.New("invalid token")
+}
+
+func HashPasswordWithSecret(password string) (string, error) {
+	combinedPassword := password + string(constants.PASSWORD_SECRET)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(combinedPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedPassword), nil
+}
+
+func CompareHashAndPasswordWithSecret(hashedPassword, password string) error {
+	combinedPassword := password + string(constants.PASSWORD_SECRET)
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(combinedPassword))
+	if err != nil {
+		return errors.New("invalid password or secret")
+	}
+
+	return nil
 }

@@ -13,7 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var validate = validator.New()
@@ -62,7 +61,7 @@ func OnBoardingUser(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, err := utils.HashPasswordWithSecret(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorHashingFailed,
 			constants.ErrorText(constants.ErrorHashingFailed), nil))
@@ -79,13 +78,8 @@ func OnBoardingUser(c *gin.Context) {
 				IsVerified: utils.BoolPtr(true),
 			},
 		},
-		Credentials: []models.Credential{
-			{
-				Password: string(hashedPassword),
-				Type:     models.CredentialsTypePassword,
-			},
-		},
-		Role: models.Customer,
+		Password: string(hashedPassword),
+		Role:     models.Customer,
 	}
 
 	if err := database.DB.Create(&newAccount).Error; err != nil {
@@ -123,6 +117,88 @@ func OnBoardingUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message":      "User registered successfully",
 		"user_id":      newAccount.UUID,
+		"access_token": token,
+	})
+}
+
+func Login(c *gin.Context) {
+	var req struct {
+		PhoneNumber *string `json:"phone_number"`
+		Email       string  `json:"email"`
+		Password    string  `json:"password" validate:"required"`
+	}
+	var (
+		userAccountRepo = models.InitAccountRepo(database.DB)
+		err             error
+		emails          = models.InitEmailRepo(database.DB)
+	)
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errResponse.Generate(constants.ErrorInvalidRequestPayload,
+			constants.ErrorText(constants.ErrorInvalidRequestPayload), nil))
+		return
+	}
+
+	// Validate request
+	if err := validate.Struct(req); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		var errorMessages []string
+		for _, fieldErr := range validationErrors {
+			errorMessages = append(errorMessages, fmt.Sprintf("Field '%s' is required", fieldErr.Field()))
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": errorMessages,
+		})
+		return
+	}
+
+	if req.PhoneNumber == nil || *req.PhoneNumber == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Either phone number or email is required",
+		})
+		return
+	}
+
+	existingAccount, err := userAccountRepo.Get(&models.Account{
+		PhoneNumber: req.PhoneNumber,
+	})
+
+	if err != nil || existingAccount == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "User does not exist",
+		})
+		return
+	}
+
+	err = utils.CompareHashAndPasswordWithSecret(existingAccount.Password, req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Please check your password",
+		})
+		return
+	}
+
+	userEmail, _ := emails.Get(&models.Email{
+		ID: *existingAccount.PrimaryEmailID,
+	})
+
+	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
+		Role:        existingAccount.Role,
+		IsPartial:   false,
+		PhoneNumber: *existingAccount.PhoneNumber,
+		Email:       userEmail.Email,
+		FirstName:   existingAccount.FirstName,
+		LastName:    existingAccount.LastName,
+	}, time.Now().Add(5*time.Minute))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
+			constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"goto":         "continue",
 		"access_token": token,
 	})
 }

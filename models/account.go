@@ -26,9 +26,9 @@ type Account struct {
 	PrimaryEmailID *uint  `gorm:"uniqueIndex:idx_unique_phone_email" json:"-"`
 	PrimaryEmail   *Email `json:"primary_email,omitempty"`
 
-	Emails      []*Email     `gorm:"many2many:account_emails" json:"emails,omitempty"`
-	Credentials []Credential `json:"-"`
-	Role        uint         `json:"role"`
+	Emails   []*Email `gorm:"many2many:account_emails" json:"emails,omitempty"`
+	Role     uint     `json:"role"`
+	Password string   `json:"password"`
 }
 
 func GetAccountByPhoneNumber(db *gorm.DB, phoneNumber string) (*Account, error) {
@@ -64,17 +64,6 @@ func (a *Account) BeforeCreate(tx *gorm.DB) error {
 		return err
 	}
 	a.UUID = userUUID
-
-	totpAccountName := userUUID
-	if a.PhoneNumber != nil && *a.PhoneNumber != "" {
-		totpAccountName = *a.PhoneNumber
-	}
-
-	ac, err := CreateOTPSecret(totpAccountName)
-	if err != nil {
-		return err
-	}
-	a.Credentials = append(a.Credentials, *ac)
 
 	if len(a.Emails) > 0 && a.PrimaryEmailID == nil {
 		a.PrimaryEmail = a.Emails[0]
@@ -245,13 +234,12 @@ func (ar *accountRepo) GetAllAccountsWithSameMailDomain(tx *gorm.DB, emailDomain
 	return &accounts, nil
 }
 
-func (ar *accountRepo) GetWithCredentials(where *Account, credcredentialType CredentialsTypeSlug) (*Account, error) {
+func (ar *accountRepo) GetWithCredentials(where *Account) (*Account, error) {
 	var (
 		u = Account{}
 	)
 	err := ar.db.Model(&Account{}).
 		Preload("Emails").
-		Preload("Credentials", "Type = ?", credcredentialType).
 		Where(where).
 		Scopes(OmitIDToDeletedAtFields).
 		Last(&u).Error

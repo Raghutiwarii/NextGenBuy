@@ -17,6 +17,7 @@ const (
 )
 
 var JWT_SECRET = []byte(os.Getenv("JWT_SECRET_KEY"))
+var PASSWORD_SECRET = []byte(os.Getenv("PASSWORD_SECRET"))
 
 // ErrorText returns the error message for a given error code
 func ErrorText(code int) string {

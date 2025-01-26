@@ -46,6 +46,8 @@ func main() {
 	// Register the /register endpoint
 	r.POST("/register", controllers.OnBoardingUser)
 
+	r.POST("/login", controllers.Login)
+
 	// Display banner in logs
 	banner := `
 	  ,------.  ,-----.  ,-----.  ,--.   ,--. 

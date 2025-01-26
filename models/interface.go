@@ -18,23 +18,10 @@ type IAccount interface {
 	DeleteWithTx(tx *gorm.DB, u *Account) error
 	FindOne(email, phoneNumber, accountUUID string) (*Account, error)
 	GetAllAccountsWithSameMailDomain(tx *gorm.DB, emailDomain string) (*[]Account, error)
-	GetWithCredentials(where *Account, credentialType CredentialsTypeSlug) (*Account, error)
 	CheckAccountAssociatedForTheEmail(accountUUID, email string) (*Email, error)
 	MarkAccountAsNotVerified(where *Account) error
 	BulkInsert(records *[]Account, conds ...clause.Expression) error
 	AddEmails(a *Account, emails []Email) error
-}
-
-type IAuthCredential interface {
-	CreateWithTx(tx *gorm.DB, c *Credential) error
-	Create(c *Credential) error
-	GetWithTx(tx *gorm.DB, where *Credential) (*Credential, error)
-	Get(where *Credential) (*Credential, error)
-	UpdateWithTx(tx *gorm.DB, where *Credential, u *Credential) error
-	Update(where *Credential, u *Credential) error
-	DeleteWithTx(tx *gorm.DB, where *Credential) error
-	Delete(where *Credential) error
-	CheckIfPasswordIsValid(userID uint, password string) (bool, error)
 }
 
 type IEmailRepo interface {
