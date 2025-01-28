@@ -147,6 +147,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	utils.Info("Request payload is ", req)
+
 	// Validate request
 	if err := validate.Struct(req); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
@@ -160,7 +162,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	if req.PhoneNumber == nil || *req.PhoneNumber == "" {
+	if req.Email == "" && req.PhoneNumber == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Either phone number or email is required",
 		})
@@ -210,6 +212,7 @@ func Login(c *gin.Context) {
 			"goto":         "continue",
 			"access_token": token,
 		})
+		return
 	}
 
 	if req.PhoneNumber != nil {
@@ -254,6 +257,7 @@ func Login(c *gin.Context) {
 			"goto":         "continue",
 			"access_token": token,
 		})
+		return
 	}
 
 	c.JSON(http.StatusInternalServerError, gin.H{
