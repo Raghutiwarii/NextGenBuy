@@ -193,6 +193,14 @@ func Login(c *gin.Context) {
 			return
 		}
 
+		err = utils.CompareHashAndPasswordWithSecret(accountWithEmail.Password, req.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Incorrect password!",
+			})
+			return
+		}
+
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        accountWithEmail.Role,
 			IsPartial:   false,
@@ -230,7 +238,7 @@ func Login(c *gin.Context) {
 		err = utils.CompareHashAndPasswordWithSecret(existingAccount.Password, req.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Please check your password",
+				"message": "Incorrect password!",
 			})
 			return
 		}
