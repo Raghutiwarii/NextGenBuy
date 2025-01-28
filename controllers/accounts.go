@@ -138,8 +138,7 @@ func Login(c *gin.Context) {
 	}
 	var (
 		userAccountRepo = models.InitAccountRepo(database.DB)
-		err             error
-		emails          = models.InitEmailRepo(database.DB)
+		emailsRepo      = models.InitEmailRepo(database.DB)
 	)
 
 	if err := c.BindJSON(&req); err != nil {
@@ -168,47 +167,97 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	existingAccount, err := userAccountRepo.Get(&models.Account{
-		PhoneNumber: req.PhoneNumber,
-	})
-
-	if err != nil || existingAccount == nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "User does not exist",
+	if req.Email != "" {
+		existingAccount, err := emailsRepo.Get(&models.Email{
+			Email: req.Email,
 		})
-		return
-	}
 
-	err = utils.CompareHashAndPasswordWithSecret(existingAccount.Password, req.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Please check your password",
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "User does not exist",
+			})
+			return
+		}
+
+		var accountWithEmail *models.Account
+		accountWithEmail, err = userAccountRepo.Get(&models.Account{
+			PrimaryEmailID: &existingAccount.ID,
 		})
-		return
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "User does not exist",
+			})
+			return
+		}
+
+		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
+			Role:        accountWithEmail.Role,
+			IsPartial:   false,
+			PhoneNumber: *accountWithEmail.PhoneNumber,
+			Email:       existingAccount.Email,
+			FirstName:   accountWithEmail.FirstName,
+			LastName:    accountWithEmail.LastName,
+		}, time.Now().Add(5*time.Minute))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
+				constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"goto":         "continue",
+			"access_token": token,
+		})
 	}
 
-	userEmail, _ := emails.Get(&models.Email{
-		ID: *existingAccount.PrimaryEmailID,
-	})
+	if req.PhoneNumber != nil {
+		existingAccount, err := userAccountRepo.Get(&models.Account{
+			PhoneNumber: req.PhoneNumber,
+		})
 
-	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-		Role:        existingAccount.Role,
-		IsPartial:   false,
-		PhoneNumber: *existingAccount.PhoneNumber,
-		Email:       userEmail.Email,
-		FirstName:   existingAccount.FirstName,
-		LastName:    existingAccount.LastName,
-	}, time.Now().Add(5*time.Minute))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "User does not exist",
+			})
+			return
+		}
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
-			constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
-		return
+		err = utils.CompareHashAndPasswordWithSecret(existingAccount.Password, req.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Please check your password",
+			})
+			return
+		}
+
+		userEmail, _ := emailsRepo.Get(&models.Email{
+			ID: *existingAccount.PrimaryEmailID,
+		})
+
+		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
+			Role:        existingAccount.Role,
+			IsPartial:   false,
+			PhoneNumber: *existingAccount.PhoneNumber,
+			Email:       userEmail.Email,
+			FirstName:   existingAccount.FirstName,
+			LastName:    existingAccount.LastName,
+		}, time.Now().Add(5*time.Minute))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
+				constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"goto":         "continue",
+			"access_token": token,
+		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"goto":         "continue",
-		"access_token": token,
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"message": "Please check your credentials",
 	})
 }
 

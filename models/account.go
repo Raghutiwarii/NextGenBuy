@@ -19,7 +19,7 @@ type Account struct {
 	UUID                string  `gorm:"unique" json:"uuid,omitempty"`
 	FirstName           string  `json:"first_name"`
 	LastName            string  `json:"last_name"`
-	CountryCode         string  `gorm:"not null;default:+1" json:"country_code,omitempty"`
+	CountryCode         string  `gorm:"not null;default:+91" json:"country_code,omitempty"`
 	PhoneNumber         *string `gorm:"uniqueIndex:idx_unique_phone_email" json:"phone_number,omitempty"`
 	PhoneNumberVerified *bool   `json:"phone_number_verified" gorm:"default:false"`
 
