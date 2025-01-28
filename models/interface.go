@@ -40,3 +40,6 @@ type IEmailRepo interface {
 	GetAll(where *Email) (*[]Email, error)
 	GetLastEmailOfAccount(accountID uint) (*Email, error)
 }
+
+type IUserRoleRepo interface {
+}

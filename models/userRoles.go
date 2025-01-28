@@ -4,6 +4,10 @@ import (
 	"gorm.io/gorm"
 )
 
+type userRoleRepo struct {
+	db *gorm.DB
+}
+
 type UserRole struct {
 	gorm.Model
 	Role     int    `json:"role" gorm:"not null"`

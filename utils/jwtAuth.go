@@ -14,19 +14,6 @@ const (
 	MockOTP   = "123123"
 )
 
-var (
-	AuthorizedUserUUIDContextKey = "user_uuid"
-	AuthorizedUserRoleContextKey = "role"
-	IsPartialContextKey          = "is_partial"
-	MerchantUUIDKey              = "merchant_uuid"
-	MerchantKey                  = "merchant"
-	UploadCategory               = "upload_category"
-	Account                      = "account"
-	ApprovalID                   = "approval_id"
-	ProductID                    = "pid"
-	Email                        = "email"
-)
-
 type CustomClaims struct {
 	Role        uint   `json:"role"`
 	IsPartial   bool   `json:"is_partial,omitempty"`

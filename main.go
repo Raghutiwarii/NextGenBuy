@@ -43,10 +43,15 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Register the /register endpoint
+	// endpoint
 	r.POST("/register", controllers.OnBoardingUser)
-
 	r.POST("/login", controllers.Login)
+
+	// Secure routes with JWT authentication middleware
+	// secured := r.Group("/")
+
+	// secured.Use(middleware.AuthMiddleware())
+	// secured.GET("/user/profile", controllers.GetUserProfile)
 
 	// Display banner in logs
 	banner := `

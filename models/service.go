@@ -13,3 +13,9 @@ func InitEmailRepo(db *gorm.DB) IEmailRepo {
 		db: db,
 	}
 }
+
+func InitUserRoleRepo(db *gorm.DB) IUserRoleRepo {
+	return &userRoleRepo{
+		db: db,
+	}
+}

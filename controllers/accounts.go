@@ -17,14 +17,19 @@ import (
 
 var validate = validator.New()
 
+type OnBoadingRequest struct {
+	PhoneNumber string `json:"phone_number" validate:"required"`
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	Email       string `json:"email"`
+	Password    string `json:"password" validate:"required"`
+}
+
 func OnBoardingUser(c *gin.Context) {
-	var req struct {
-		PhoneNumber string `json:"phone_number" validate:"required"`
-		FirstName   string `json:"first_name" validate:"required"`
-		LastName    string `json:"last_name" validate:"required"`
-		Email       string `json:"email"`
-		Password    string `json:"password" validate:"required"`
-	}
+	var (
+		req         = OnBoadingRequest{}
+		AccountRepo = models.InitAccountRepo(database.DB)
+	)
 
 	// Bind JSON request body to the struct
 	if err := c.BindJSON(&req); err != nil {
@@ -54,8 +59,10 @@ func OnBoardingUser(c *gin.Context) {
 		return
 	}
 
-	var existingAccount models.Account
-	if err := database.DB.Where("phone_number = ?", req.PhoneNumber).First(&existingAccount).Error; err == nil {
+	existingAccount, err := AccountRepo.Get(&models.Account{
+		PhoneNumber: &req.PhoneNumber})
+
+	if err == nil || existingAccount != nil {
 		c.JSON(http.StatusBadRequest, errResponse.Generate(constants.ErrorUserAlreadyExists,
 			constants.ErrorText(constants.ErrorUserAlreadyExists), nil))
 		return
@@ -82,7 +89,9 @@ func OnBoardingUser(c *gin.Context) {
 		Role:     models.Customer,
 	}
 
-	if err := database.DB.Create(&newAccount).Error; err != nil {
+	err = AccountRepo.Create(&newAccount)
+
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorDatabaseCreateFailed,
 			constants.ErrorText(constants.ErrorDatabaseCreateFailed), nil))
 		return
@@ -201,4 +210,8 @@ func Login(c *gin.Context) {
 		"goto":         "continue",
 		"access_token": token,
 	})
+}
+
+func GetUserProfile(c *gin.Context) {
+
 }
