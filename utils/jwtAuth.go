@@ -17,10 +17,7 @@ const (
 type CustomClaims struct {
 	Role        uint   `json:"role"`
 	IsPartial   bool   `json:"is_partial,omitempty"`
-	PhoneNumber string `json:"phone_number,omitempty"`
-	Email       string `json:"email,omitempty"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
+	AccountUUID string `json:"account_uuid,omitempty"`
 }
 
 type JWTTokenClaims struct {

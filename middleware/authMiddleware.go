@@ -44,7 +44,7 @@ func AuthMiddleware(secretKey []byte) gin.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(c.Request.Context(), AuthorizedUserUUIDContextKey, claims.Email)
+		ctx := context.WithValue(c.Request.Context(), AuthorizedUserUUIDContextKey, claims.AccountUUID)
 		ctx = context.WithValue(ctx, AuthorizedUserRoleContextKey, claims.Role)
 		ctx = context.WithValue(ctx, IsPartialContextKey, claims.IsPartial)
 		c.Request = c.Request.WithContext(ctx)

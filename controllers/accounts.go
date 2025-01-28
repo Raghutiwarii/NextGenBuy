@@ -111,10 +111,7 @@ func OnBoardingUser(c *gin.Context) {
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 		Role:        newAccount.Role,
 		IsPartial:   false,
-		PhoneNumber: *newAccount.PhoneNumber,
-		Email:       newAccount.PrimaryEmail.Email,
-		FirstName:   newAccount.FirstName,
-		LastName:    newAccount.LastName,
+		AccountUUID: newAccount.UUID,
 	}, time.Now().Add(5*time.Minute))
 
 	if err != nil {
@@ -204,10 +201,7 @@ func Login(c *gin.Context) {
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        accountWithEmail.Role,
 			IsPartial:   false,
-			PhoneNumber: *accountWithEmail.PhoneNumber,
-			Email:       existingAccount.Email,
-			FirstName:   accountWithEmail.FirstName,
-			LastName:    accountWithEmail.LastName,
+			AccountUUID: accountWithEmail.UUID,
 		}, time.Now().Add(5*time.Minute))
 
 		if err != nil {
@@ -243,17 +237,10 @@ func Login(c *gin.Context) {
 			return
 		}
 
-		userEmail, _ := emailsRepo.Get(&models.Email{
-			ID: *existingAccount.PrimaryEmailID,
-		})
-
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        existingAccount.Role,
 			IsPartial:   false,
-			PhoneNumber: *existingAccount.PhoneNumber,
-			Email:       userEmail.Email,
-			FirstName:   existingAccount.FirstName,
-			LastName:    existingAccount.LastName,
+			AccountUUID: existingAccount.UUID,
 		}, time.Now().Add(5*time.Minute))
 
 		if err != nil {
