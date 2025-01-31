@@ -4,6 +4,8 @@ import (
 	"gorm.io/gorm"
 )
 
+type RoleID uint64
+
 type userRoleRepo struct {
 	db *gorm.DB
 }
@@ -15,18 +17,18 @@ type UserRole struct {
 }
 
 const (
-	Admin    = 1 // Admin role
-	Merchant = 2 // Merchant role
-	Customer = 3 // Customer role
+	AdminRole    = 1 // Admin role
+	MerchantRole = 2 // Merchant role
+	CustomerRole = 3 // Customer role
 )
 
 func (ur *UserRole) GetRoleName() string {
 	switch ur.Role {
-	case Admin:
+	case AdminRole:
 		return "Admin"
-	case Merchant:
+	case MerchantRole:
 		return "Merchant"
-	case Customer:
+	case CustomerRole:
 		return "Customer"
 	default:
 		return "Unknown"

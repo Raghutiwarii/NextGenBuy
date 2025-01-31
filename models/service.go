@@ -19,3 +19,15 @@ func InitUserRoleRepo(db *gorm.DB) IUserRoleRepo {
 		db: db,
 	}
 }
+
+func InitCustomerRepo(db *gorm.DB) ICustomerRepo {
+	return &customerRepo{
+		db: db,
+	}
+}
+
+func InitAddressRepo(db *gorm.DB) IAddress {
+	return &addressRepo{
+		db: db,
+	}
+}

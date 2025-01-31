@@ -27,7 +27,7 @@ type Account struct {
 	PrimaryEmail   *Email `json:"primary_email,omitempty"`
 
 	Emails   []*Email `gorm:"many2many:account_emails" json:"emails,omitempty"`
-	Role     uint     `json:"role"`
+	RoleID     uint     `json:"role_id"`
 	Password string   `json:"password"`
 }
 

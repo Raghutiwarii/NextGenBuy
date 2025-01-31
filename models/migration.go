@@ -5,6 +5,8 @@ var migrationModels = []interface{}{
 	&Account{},
 	&Email{},
 	&UserRole{},
+	&Customer{},
+	&Address{},
 }
 
 func GetMigrationModels() []interface{} {

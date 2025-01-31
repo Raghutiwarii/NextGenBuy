@@ -86,7 +86,7 @@ func OnBoardingUser(c *gin.Context) {
 			},
 		},
 		Password: string(hashedPassword),
-		Role:     models.Customer,
+		RoleID:   models.CustomerRole,
 	}
 
 	err = AccountRepo.Create(&newAccount)
@@ -98,7 +98,7 @@ func OnBoardingUser(c *gin.Context) {
 	}
 
 	newRole := models.UserRole{
-		Role:     models.Customer,
+		Role:     int(newAccount.RoleID),
 		RoleName: "Customer",
 	}
 
@@ -109,7 +109,7 @@ func OnBoardingUser(c *gin.Context) {
 	}
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-		Role:        newAccount.Role,
+		Role:        newAccount.RoleID,
 		IsPartial:   false,
 		AccountUUID: newAccount.UUID,
 	}, time.Now().Add(5*time.Minute))
@@ -143,8 +143,6 @@ func Login(c *gin.Context) {
 			constants.ErrorText(constants.ErrorInvalidRequestPayload), nil))
 		return
 	}
-
-	utils.Info("Request payload is ", req)
 
 	// Validate request
 	if err := validate.Struct(req); err != nil {
@@ -199,7 +197,7 @@ func Login(c *gin.Context) {
 		}
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-			Role:        accountWithEmail.Role,
+			Role:        accountWithEmail.RoleID,
 			IsPartial:   false,
 			AccountUUID: accountWithEmail.UUID,
 		}, time.Now().Add(5*time.Minute))
@@ -238,7 +236,7 @@ func Login(c *gin.Context) {
 		}
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-			Role:        existingAccount.Role,
+			Role:        existingAccount.RoleID,
 			IsPartial:   false,
 			AccountUUID: existingAccount.UUID,
 		}, time.Now().Add(5*time.Minute))

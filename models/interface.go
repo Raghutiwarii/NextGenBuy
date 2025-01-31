@@ -43,3 +43,19 @@ type IEmailRepo interface {
 
 type IUserRoleRepo interface {
 }
+
+type ICustomerRepo interface {
+}
+
+type IMerchantRepo interface {
+}
+
+type IAddress interface {
+	Create(a *Address) error
+	CreateWithTX(tx *gorm.DB, a *Address) error
+	Get(where *Address) (*Address, error)
+	GetAll(where *Address) ([]Address, error)
+	GetWithTx(tx *gorm.DB, where *Address) (*Address, error)
+	Update(where *Address, a *Address) error
+	UpdateWithTx(tx *gorm.DB, where *Address, a *Address) error
+}
