@@ -1,7 +1,6 @@
 package models
 
 import (
-	logger "ecom/backend/utils"
 	utils "ecom/backend/utils"
 	"fmt"
 
@@ -37,7 +36,7 @@ type Customer struct {
 func (c *Customer) BeforeCreate(tx *gorm.DB) error {
 	nanoID, err := utils.GenerateNanoID(15, "C_")
 	if err != nil {
-		logger.Error("error in creating nano id ", err)
+		utils.Error("error in creating nano id ", err)
 		tx.Rollback()
 		return err
 	}
@@ -55,7 +54,7 @@ func (c *customerRepo) GetAccountUUIDsByWalletUUIDs(uuids []string) ([]string, e
 		Where("wallet_id IN (?)", uuids).
 		Select("account_uuid").Scan(&accountUUIDs).Error
 	if err != nil {
-		logger.Error("error in getting wallet uuids ", err)
+		utils.Error("error in getting wallet uuids ", err)
 		return accountUUIDs, nil
 	}
 	return accountUUIDs, err
@@ -69,8 +68,27 @@ func (cus *customerRepo) CreateWithTx(tx *gorm.DB, c *Customer) error {
 	err := tx.Clauses(clause.OnConflict{UpdateAll: true}).
 		Model(&Customer{}).Create(&c).Error
 	if err != nil {
-		logger.Error("error in creating user ", err)
+		utils.Error("error in creating user ", err)
 		return err
 	}
 	return nil
+}
+
+func (cus *customerRepo) Get(where *Customer) (*Customer, error) {
+	return cus.GetWithTx(cus.db, where)
+}
+
+func (cus *customerRepo) GetWithTx(tx *gorm.DB, where *Customer) (*Customer, error) {
+	var (
+		c = Customer{}
+	)
+	err := tx.Model(&Customer{}).
+		Where(where).
+		Scopes(OmitIDToDeletedAtFields).
+		Last(&c).Error
+	if err != nil {
+		utils.Error("unable to query customer ", err)
+		return nil, err
+	}
+	return &c, nil
 }

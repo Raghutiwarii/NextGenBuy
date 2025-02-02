@@ -17,7 +17,7 @@ import (
 
 var validate = validator.New()
 
-type OnBoadingRequest struct {
+type OnBoadingCustomerRequest struct {
 	PhoneNumber string `json:"phone_number" validate:"required"`
 	FirstName   string `json:"first_name" validate:"required"`
 	LastName    string `json:"last_name" validate:"required"`
@@ -25,9 +25,9 @@ type OnBoadingRequest struct {
 	Password    string `json:"password" validate:"required"`
 }
 
-func OnBoardingUser(c *gin.Context) {
+func OnBoardingCustomer(c *gin.Context) {
 	var (
-		req         = OnBoadingRequest{}
+		req         = OnBoadingCustomerRequest{}
 		AccountRepo = models.InitAccountRepo(database.DB)
 	)
 
@@ -99,7 +99,7 @@ func OnBoardingUser(c *gin.Context) {
 
 	newRole := models.UserRole{
 		Role:     int(newAccount.RoleID),
-		RoleName: "Customer",
+		RoleName: models.GetRoleName(models.CustomerRole),
 	}
 
 	if err := database.DB.Create(&newRole).Error; err != nil {

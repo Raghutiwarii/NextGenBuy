@@ -41,15 +41,6 @@ type IEmailRepo interface {
 	GetLastEmailOfAccount(accountID uint) (*Email, error)
 }
 
-type IUserRoleRepo interface {
-}
-
-type ICustomerRepo interface {
-}
-
-type IMerchantRepo interface {
-}
-
 type IAddress interface {
 	Create(a *Address) error
 	CreateWithTX(tx *gorm.DB, a *Address) error
@@ -58,4 +49,23 @@ type IAddress interface {
 	GetWithTx(tx *gorm.DB, where *Address) (*Address, error)
 	Update(where *Address, a *Address) error
 	UpdateWithTx(tx *gorm.DB, where *Address, a *Address) error
+}
+
+type IMerchant interface {
+	Get(where *Merchant) (*Merchant, error)
+	GetByID(id uint) (*Merchant, error)
+	GetWithTX(tx *gorm.DB, where *Merchant) (*Merchant, error)
+	Create(m *Merchant) error
+	GetByUUID(merchantUUID string) (*Merchant, error)
+	CreateWithTx(tx *gorm.DB, m *Merchant) error
+	Update(where *Merchant, m *Merchant) error
+	UpdateWithTx(tx *gorm.DB, where *Merchant, m *Merchant) error
+	Delete(where *Merchant) error
+	DeleteWithTx(where *Merchant) error
+}
+
+type ICustomerRepo interface {
+	Create(c *Customer) error
+	CreateWithTx(tx *gorm.DB, c *Customer) error
+	Get(where *Customer) (*Customer, error)
 }

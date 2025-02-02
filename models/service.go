@@ -14,12 +14,6 @@ func InitEmailRepo(db *gorm.DB) IEmailRepo {
 	}
 }
 
-func InitUserRoleRepo(db *gorm.DB) IUserRoleRepo {
-	return &userRoleRepo{
-		db: db,
-	}
-}
-
 func InitCustomerRepo(db *gorm.DB) ICustomerRepo {
 	return &customerRepo{
 		db: db,
@@ -28,6 +22,12 @@ func InitCustomerRepo(db *gorm.DB) ICustomerRepo {
 
 func InitAddressRepo(db *gorm.DB) IAddress {
 	return &addressRepo{
+		db: db,
+	}
+}
+
+func InitMerchantRepo(db *gorm.DB) IMerchant {
+	return &merchantRepo{
 		db: db,
 	}
 }

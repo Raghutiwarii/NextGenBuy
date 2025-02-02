@@ -44,8 +44,10 @@ func main() {
 	}))
 
 	// endpoint
-	r.POST("/register", controllers.OnBoardingUser)
+	r.POST("/register", controllers.OnBoardingCustomer)
 	r.POST("/login", controllers.Login)
+
+	r.POST("/merchant/register", controllers.OnBoardingMerchant)
 
 	// Secure routes with JWT authentication middleware
 	// secured := r.Group("/")

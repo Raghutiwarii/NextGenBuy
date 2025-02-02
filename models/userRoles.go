@@ -22,8 +22,8 @@ const (
 	CustomerRole = 3 // Customer role
 )
 
-func (ur *UserRole) GetRoleName() string {
-	switch ur.Role {
+func GetRoleName(roleID uint) string {
+	switch roleID {
 	case AdminRole:
 		return "Admin"
 	case MerchantRole:
