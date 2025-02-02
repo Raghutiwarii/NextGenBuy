@@ -26,32 +26,23 @@ const (
 )
 
 type Merchant struct {
-	ID                           uint           `json:"-" gorm:"primaryKey"`
-	CreatedAt                    *time.Time     `json:"-"`
-	UpdatedAt                    *time.Time     `json:"-"`
-	DeletedAt                    gorm.DeletedAt `json:"-" gorm:"index"`
-	UUID                         string         `gorm:"unique" json:"uuid,omitempty"`
-	AccountUUID                  string         `json:"account_uuid"`
-	CorporateName                string         `json:"corporate_name,omitempty" gorm:"AUDITABLE"`
-	DetailsConfirmedAt           *time.Time     `json:"details_confirmed_at,omitempty"`
-	LogoURL                      string         `json:"logo_url,omitempty" gorm:"AUDITABLE"`
-	DoingBusinessAs              string         `json:"doing_business_as,omitempty" gorm:"AUDITABLE"`
-	Website                      string         `json:"website,omitempty" gorm:"AUDITABLE"`
-	EmployerIdentificationNumber string         `json:"employer_identification_number" gorm:"AUDITABLE"`
-	ApprovedAt                   *time.Time     `json:"approved_at,omitempty"`
-	SupportEmail                 string         `json:"support_email,omitempty" gorm:"AUDITABLE"`
-	CorporatePhone               string         `json:"corporate_phone,omitempty" gorm:"AUDITABLE"`
-	SupportPhoneNumber           string         `json:"support_phone_number,omitempty" gorm:"AUDITABLE"`
-	WalletID                     string         `json:"wallet_id,omitempty"`
-	Address                      Address        `gorm:"embedded"`
+	ID                 uint           `json:"-" gorm:"primaryKey"`
+	CreatedAt          *time.Time     `json:"-"`
+	UpdatedAt          *time.Time     `json:"-"`
+	DeletedAt          gorm.DeletedAt `json:"-" gorm:"index"`
+	UUID               string         `gorm:"unique" json:"uuid,omitempty"`
+	AccountUUID        string         `json:"account_uuid"`
+	CorporateName      string         `json:"corporate_name,omitempty" gorm:"AUDITABLE"`
+	DetailsConfirmedAt *time.Time     `json:"details_confirmed_at,omitempty"`
+	LogoURL            string         `json:"logo_url,omitempty" gorm:"AUDITABLE"`
+	DoingBusinessAs    string         `json:"doing_business_as,omitempty" gorm:"AUDITABLE"`
+	Website            string         `json:"website,omitempty" gorm:"AUDITABLE"`
+	ApprovedAt         *time.Time     `json:"approved_at,omitempty"`
+	WalletID           string         `json:"wallet_id,omitempty"`
+	Address            Address        `gorm:"embedded"`
 
-	ApplicationCurrentStatus  MerchantOnboardingState `json:"application_current_status" gorm:"AUDITABLE"`
-	IsBlocked                 *bool                   `json:"is_blocked,omitempty" gorm:"default:false"`
-	BankProviderReferenceUUID string                  `json:"bank_provider_reference_uuid,omitempty"`
-	ReturnAndRefundPolicyLink string                  `json:"return_and_refund_policy_link,omitempty"`
-	NextBillingDate           *time.Time              `json:"next_billing_date"`
-
-	Logo string `json:"logo" gorm:"polymorphic:Owner"`
+	ApplicationCurrentStatus MerchantOnboardingState `json:"application_current_status" gorm:"AUDITABLE"`
+	IsBlocked                *bool                   `json:"is_blocked,omitempty" gorm:"default:false"`
 }
 
 type merchantRepo struct {
@@ -92,7 +83,7 @@ func (mr *merchantRepo) GetWithTX(tx *gorm.DB, where *Merchant) (*Merchant, erro
 		merchant = Merchant{}
 	)
 
-	err := tx.Model(&Merchant{}).Preload("Logo").Where(where).Last(&merchant).Error
+	err := tx.Model(&Merchant{}).Where(where).Last(&merchant).Error
 	if err != nil {
 		utils.Error("unable to get merchant ", err)
 		return nil, err

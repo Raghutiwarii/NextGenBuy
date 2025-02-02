@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"math/rand"
+	"time"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -30,4 +32,10 @@ type GenerateIDError struct {
 
 func (e *GenerateIDError) Error() string {
 	return e.Message
+}
+
+// Generate a random 6 digit OTP
+func GenerateOTP() string {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return fmt.Sprintf("%06d", r.Intn(1000000))
 }

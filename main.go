@@ -3,6 +3,7 @@ package main
 import (
 	"ecom/backend/controllers"
 	"ecom/backend/database"
+	"ecom/backend/middleware"
 	"fmt"
 	"log"
 	"os"
@@ -51,6 +52,13 @@ func main() {
 
 	// Secure routes with JWT authentication middleware
 	// secured := r.Group("/")
+
+	partialAuthV1Group := r.Group("",
+		middleware.AuthMiddleware([]byte(os.Getenv("SECRET")), true))
+
+	partialVerifyAccountV1Group := partialAuthV1Group.Group("/authenticate")
+
+	partialVerifyAccountV1Group.POST("/verify_account", controllers.VerifyOTP)
 
 	// secured.Use(middleware.AuthMiddleware())
 	// secured.GET("/user/profile", controllers.GetUserProfile)

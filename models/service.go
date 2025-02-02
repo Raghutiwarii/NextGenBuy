@@ -31,3 +31,9 @@ func InitMerchantRepo(db *gorm.DB) IMerchant {
 		db: db,
 	}
 }
+
+func InitOTPRepo(db *gorm.DB) IOTPRepo {
+	return &OTPRepo{
+		db: db,
+	}
+}

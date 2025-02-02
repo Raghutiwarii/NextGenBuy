@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"ecom/backend/database"
 	"ecom/backend/models"
 	"ecom/backend/utils"
@@ -17,17 +16,10 @@ const (
 )
 
 var (
-	AuthorizedUserUUIDContextKey = "user_uuid"
 	AuthorizedUserRoleContextKey = "role"
 	IsPartialContextKey          = "is_partial"
 	MerchantUUIDKey              = "merchant_uuid"
-	MerchantKey                  = "merchant"
-	UploadCategory               = "upload_category"
-	Account                      = "account"
-	ApprovalID                   = "approval_id"
-	ProductID                    = "pid"
-	Email                        = "email"
-	AccountUUID                  = "account_uuid"
+	AccountUUIDContextKey        = "account_uuid"
 )
 
 func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
@@ -51,6 +43,8 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 			return
 		}
 
+		utils.Info("getting context role from token ", claims.Role)
+
 		if claims.IsPartial && !allowPartial {
 			utils.Error("cannot mix tokentype partial with full auth scoped token")
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
@@ -70,7 +64,7 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 		}
 
 		if c.GetString(MerchantUUIDKey) == "" && claims.MerchantUUID != "" &&
-			claims.Role == models.MerchantRole {
+			claims.Role == models.GetRoleName(models.MerchantRole) {
 			merchantUUID, err := merchantRepo.Get(&models.Merchant{
 				UUID: claims.MerchantUUID})
 			if err != nil {
@@ -83,8 +77,8 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 			c.Set(MerchantUUIDKey, merchantUUID.UUID)
 		}
 
-		if c.GetString(AccountUUID) == "" && claims.AccountUUID != "" &&
-			claims.Role == models.CustomerRole {
+		if c.GetString(AccountUUIDContextKey) == "" && claims.AccountUUID != "" &&
+			claims.Role == models.GetRoleName(models.CustomerRole) {
 			Customer, err := customerRepo.Get(&models.Customer{
 				AccountUUID: claims.AccountUUID})
 			if err != nil {
@@ -94,17 +88,13 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 				})
 				return
 			}
-			c.Set(AccountUUID, Customer.AccountUUID)
+			c.Set(AccountUUIDContextKey, Customer.AccountUUID)
 		}
 
-		type contextKey string
-
-		const userUUIDKey contextKey = "user_uuid"
-
-		ctx := context.WithValue(c.Request.Context(), userUUIDKey, claims.AccountUUID)
-		ctx = context.WithValue(ctx, contextKey(AuthorizedUserRoleContextKey), claims.Role)
-		ctx = context.WithValue(ctx, contextKey(IsPartialContextKey), claims.IsPartial)
-		c.Request = c.Request.WithContext(ctx)
+		c.Set(AuthorizedUserRoleContextKey, claims.Role)
+		c.Set(IsPartialContextKey, claims.IsPartial)
+		c.Set(MerchantUUIDKey, claims.MerchantUUID)
+		c.Set(AccountUUIDContextKey, claims.AccountUUID)
 
 		c.Next()
 	}

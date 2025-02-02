@@ -8,6 +8,7 @@ import (
 	"ecom/backend/constants"
 	"ecom/backend/database"
 	"ecom/backend/errResponse"
+	"ecom/backend/middleware"
 	"ecom/backend/models"
 	"ecom/backend/utils"
 
@@ -16,6 +17,10 @@ import (
 )
 
 var validate = validator.New()
+
+type verifyRequest struct {
+	OTP string `json:"otp"`
+}
 
 type OnBoadingCustomerRequest struct {
 	PhoneNumber string `json:"phone_number" validate:"required"`
@@ -109,7 +114,7 @@ func OnBoardingCustomer(c *gin.Context) {
 	}
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-		Role:        newAccount.RoleID,
+		Role:        models.GetRoleName(newAccount.RoleID),
 		IsPartial:   false,
 		AccountUUID: newAccount.UUID,
 	}, time.Now().Add(5*time.Minute))
@@ -117,6 +122,25 @@ func OnBoardingCustomer(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
 			constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
+		return
+	}
+
+	otpCode := utils.GenerateOTP()
+
+	// Create OTP instance
+	otp := models.OTP{
+		AccountUUID: newAccount.UUID,
+		Code:        otpCode,
+		ExpiresAt:   time.Now().Add(time.Second * 50),
+	}
+
+	utils.Info("Otp sent to phone successfully. OTP is ", otpCode)
+
+	// Save OTP to the database
+	if err := database.DB.Create(&otp).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create OTP",
+		})
 		return
 	}
 
@@ -197,7 +221,7 @@ func Login(c *gin.Context) {
 		}
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-			Role:        accountWithEmail.RoleID,
+			Role:        models.GetRoleName(accountWithEmail.RoleID),
 			IsPartial:   false,
 			AccountUUID: accountWithEmail.UUID,
 		}, time.Now().Add(5*time.Minute))
@@ -236,7 +260,7 @@ func Login(c *gin.Context) {
 		}
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-			Role:        existingAccount.RoleID,
+			Role:        models.GetRoleName(existingAccount.RoleID),
 			IsPartial:   false,
 			AccountUUID: existingAccount.UUID,
 		}, time.Now().Add(5*time.Minute))
@@ -260,4 +284,173 @@ func Login(c *gin.Context) {
 
 func GetUserProfile(c *gin.Context) {
 
+}
+
+func VerifyOTP(c *gin.Context) {
+	var (
+		req          = verifyRequest{}
+		customerRepo = models.InitCustomerRepo(database.DB)
+		merchantRepo = models.InitMerchantRepo(database.DB)
+		otpRepo      = models.InitOTPRepo(database.DB)
+	)
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to parse request body",
+		})
+		return
+	}
+
+	role, ok := c.Get(middleware.AuthorizedUserRoleContextKey)
+
+	utils.Info("getting role from context ", role)
+
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to get role || invalid role",
+		})
+		return
+	}
+
+	roleStr, ok := role.(string)
+	if !ok {
+		utils.Error("Role is not of type string")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to get role || invalid string",
+		})
+		return
+	}
+
+	utils.Info("getting role from string ", roleStr)
+
+	account, ok := c.Get(middleware.AccountUUIDContextKey)
+	utils.Info("getting customer account ", account)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Failed to get CustomerID",
+		})
+		return
+	}
+	accountiD, ok := account.(string)
+	if !ok {
+		utils.Error("Role is not of type string")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to get role || unable to get role",
+		})
+		return
+	}
+
+	if roleStr == models.GetRoleName(models.CustomerRole) {
+		customer, err := customerRepo.Get(&models.Customer{
+			AccountUUID: accountiD,
+		})
+
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Failed to get customer details",
+			})
+			return
+		}
+
+		otp, err := otpRepo.Get(&models.OTP{
+			AccountUUID: customer.AccountUUID,
+		})
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Failed to get OTP",
+			})
+		}
+
+		if otp.ExpiresAt.Before(time.Now()) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "OTP expired",
+			})
+			return
+		}
+
+		if otp.Code == req.OTP {
+			err = otpRepo.Update(&models.OTP{
+				ExpiresAt: time.Now(),
+			}, otp)
+
+			if err != nil {
+				c.JSON(http.StatusForbidden, gin.H{
+					"error": "Failed to update OTP",
+				})
+				return
+			}
+
+			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
+				Role:        role.(string),
+				IsPartial:   false,
+				AccountUUID: customer.AccountUUID,
+			}, time.Now().Add(60*60*time.Minute))
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Failed to generate token",
+				})
+				return
+			}
+
+			c.JSON(http.StatusAccepted, gin.H{
+				"message":      "OTP verified successfully",
+				"access_token": token,
+			})
+			return
+		}
+
+	} else if roleStr == models.GetRoleName(models.MerchantRole) {
+		merchant, err := merchantRepo.Get(&models.Merchant{
+			AccountUUID: accountiD,
+		})
+
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Failed to get merchant details",
+			})
+			return
+		}
+
+		otp, err := otpRepo.Get(&models.OTP{
+			AccountUUID: merchant.AccountUUID,
+		})
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Failed to get OTP",
+			})
+		}
+
+		if otp.ExpiresAt.Before(time.Now()) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "OTP expired",
+			})
+			return
+		}
+
+		if otp.Code == req.OTP {
+			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
+				Role:        role.(string),
+				IsPartial:   false,
+				AccountUUID: merchant.AccountUUID,
+			}, time.Now().Add(60*60*time.Minute))
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Failed to generate token",
+				})
+				return
+			}
+
+			c.JSON(http.StatusAccepted, gin.H{
+				"message":      "OTP verified successfully",
+				"access_token": token,
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusForbidden, gin.H{
+		"message": "Invalid OTP",
+	})
 }

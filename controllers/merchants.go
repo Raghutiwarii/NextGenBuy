@@ -55,14 +55,10 @@ func OnBoardingMerchant(c *gin.Context) {
 		return
 	}
 
-	existingAccount, _ := AccountRepo.Get(&models.Account{
+	existingAccount, err := AccountRepo.Get(&models.Account{
 		PhoneNumber: &req.PhoneNumber})
 
-	merchantExist, err := merchantRepo.Get(&models.Merchant{
-		AccountUUID: existingAccount.UUID,
-	})
-
-	if err == nil || merchantExist.ApplicationCurrentStatus == models.MerchantOnboardingStateApproved {
+	if err == nil || existingAccount != nil {
 		c.JSON(http.StatusBadRequest, errResponse.Generate(constants.ErrorUserAlreadyExists,
 			constants.ErrorText(constants.ErrorUserAlreadyExists), nil))
 		return
@@ -118,14 +114,33 @@ func OnBoardingMerchant(c *gin.Context) {
 	}
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
-		Role:        newAccount.RoleID,
+		Role:        models.GetRoleName(newAccount.RoleID),
 		IsPartial:   true,
 		AccountUUID: newAccount.UUID,
-	}, time.Now().Add(5*time.Minute))
+	}, time.Now().Add(60*60*time.Minute))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorTokenGenerationFailed,
 			constants.ErrorText(constants.ErrorTokenGenerationFailed), nil))
+		return
+	}
+
+	otpCode := utils.GenerateOTP()
+
+	// Create OTP instance
+	otp := models.OTP{
+		AccountUUID: newAccount.UUID,
+		Code:        otpCode,
+		ExpiresAt:   time.Now().Add(time.Second * 50),
+	}
+
+	utils.Info("Otp sent to phone successfully. OTP is ", otpCode)
+
+	// Save OTP to the database
+	if err := database.DB.Create(&otp).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create OTP",
+		})
 		return
 	}
 

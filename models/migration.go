@@ -8,6 +8,7 @@ var migrationModels = []interface{}{
 	&Customer{},
 	&Address{},
 	&Merchant{},
+	&OTP{},
 }
 
 func GetMigrationModels() []interface{} {

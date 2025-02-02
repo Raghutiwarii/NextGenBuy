@@ -69,3 +69,10 @@ type ICustomerRepo interface {
 	CreateWithTx(tx *gorm.DB, c *Customer) error
 	Get(where *Customer) (*Customer, error)
 }
+
+type IOTPRepo interface {
+	Create(otp *OTP) error
+	Get(where *OTP) (*OTP, error)
+	Update(where *OTP, o *OTP) error
+	UpdateWithTx(tx *gorm.DB, where *OTP, o *OTP) error
+}

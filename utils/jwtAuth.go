@@ -15,7 +15,7 @@ const (
 )
 
 type CustomClaims struct {
-	Role         uint   `json:"role"`
+	Role         string   `json:"role"`
 	IsPartial    bool   `json:"is_partial,omitempty"`
 	AccountUUID  string `json:"account_uuid,omitempty"`
 	MerchantUUID string `json:"merchant_uuid,omitempty"`
