@@ -16,7 +16,7 @@ type Account struct {
 	UpdatedAt *time.Time     `json:"updated_at,omitempty"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
-	UUID                string  `gorm:"unique" json:"uuid,omitempty"`
+	AccountId           string  `gorm:"unique" json:"account_id,omitempty"`
 	FirstName           string  `json:"first_name"`
 	LastName            string  `json:"last_name"`
 	CountryCode         string  `gorm:"not null;default:+91" json:"country_code,omitempty"`
@@ -27,7 +27,7 @@ type Account struct {
 	PrimaryEmail   *Email `json:"primary_email,omitempty"`
 
 	Emails   []*Email `gorm:"many2many:account_emails" json:"emails,omitempty"`
-	RoleID     uint     `json:"role_id"`
+	RoleID   uint     `json:"role_id"`
 	Password string   `json:"password"`
 }
 
@@ -51,7 +51,7 @@ func (a *Account) BeforeCreate(tx *gorm.DB) error {
 	})
 	tx.Statement.AddClause(clause.Returning{Columns: []clause.Column{
 		{
-			Name: "uuid",
+			Name: "account_id",
 		},
 		{
 			Name: "id",
@@ -63,7 +63,7 @@ func (a *Account) BeforeCreate(tx *gorm.DB) error {
 		utils.Error("unable to generate nano id ", err)
 		return err
 	}
-	a.UUID = userUUID
+	a.AccountId = userUUID
 
 	if len(a.Emails) > 0 && a.PrimaryEmailID == nil {
 		a.PrimaryEmail = a.Emails[0]
@@ -196,7 +196,7 @@ func (ar *accountRepo) FindOne(email, phoneNumber, accountUUID string) (*Account
 
 	if accountUUID != "" {
 		builder.Or(&Account{
-			UUID: accountUUID,
+			AccountId: accountUUID,
 		})
 	}
 
@@ -255,7 +255,7 @@ func (ar *accountRepo) CheckAccountAssociatedForTheEmail(accountUUID string, ema
 	if err := ar.db.Model(&Email{}).
 		Joins("JOIN account_emails on account_emails.email_id = emails.id").
 		Joins("JOIN accounts ON account_emails.account_id = accounts.id").
-		Where("accounts.uuid = ? AND emails.email = ?", accountUUID, email).
+		Where("accounts.account_id = ? AND emails.email = ?", accountUUID, email).
 		First(&accountEmail).Error; err != nil {
 		utils.Error("failed to get account associations: ", err)
 		return nil, err

@@ -24,13 +24,13 @@ type Customer struct {
 	BirthMonth            uint      `json:"birth_month,omitempty"`
 	BirthDay              uint      `json:"birth_day,omitempty"`
 	BirthYear             uint      `json:"birth_year,omitempty"`
-	SSN                   string    `json:"ssn"`
 	HasWalletTransactions *bool     `json:"has_wallet_transactions,omitempty"`
 
 	Addresses []Address `json:"-" gorm:"polymorphic:Owner;"`
 
 	// common associations
-	RoleID RoleID `json:"role_id" gorm:"not null"`
+	RoleID  RoleID  `json:"role_id" gorm:"not null"`
+	Account Account `json:"account,omitempty" gorm:"foreignKey:AccountUUID;references:AccountId"`
 }
 
 func (c *Customer) BeforeCreate(tx *gorm.DB) error {

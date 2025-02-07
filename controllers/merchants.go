@@ -103,7 +103,7 @@ func OnBoardingMerchant(c *gin.Context) {
 	}
 
 	newMerchant := models.Merchant{
-		AccountUUID:              newAccount.UUID,
+		AccountUUID:              newAccount.AccountId,
 		ApplicationCurrentStatus: models.MerchantOnboardingStateVerifyAccount,
 	}
 
@@ -115,8 +115,8 @@ func OnBoardingMerchant(c *gin.Context) {
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 		Role:        models.GetRoleName(newAccount.RoleID),
-		IsPartial:   true,
-		AccountUUID: newAccount.UUID,
+		IsPartial:   utils.BoolPtr(true),
+		AccountUUID: newAccount.AccountId,
 	}, time.Now().Add(60*60*time.Minute))
 
 	if err != nil {
@@ -129,7 +129,7 @@ func OnBoardingMerchant(c *gin.Context) {
 
 	// Create OTP instance
 	otp := models.OTP{
-		AccountUUID: newAccount.UUID,
+		AccountUUID: newAccount.AccountId,
 		Code:        otpCode,
 		ExpiresAt:   time.Now().Add(time.Second * 50),
 	}
@@ -145,8 +145,8 @@ func OnBoardingMerchant(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message":      "Merchant registered successfully",
-		"user_id":      newAccount.UUID,
+		"goto":         "VERIFY_OTP",
+		"account_id":   newAccount.AccountId,
 		"access_token": token,
 	})
 }

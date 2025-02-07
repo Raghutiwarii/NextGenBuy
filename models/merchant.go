@@ -43,6 +43,7 @@ type Merchant struct {
 
 	ApplicationCurrentStatus MerchantOnboardingState `json:"application_current_status" gorm:"AUDITABLE"`
 	IsBlocked                *bool                   `json:"is_blocked,omitempty" gorm:"default:false"`
+	Account                  Account                 `json:"account,omitempty" gorm:"foreignKey:AccountUUID;references:AccountId"`
 }
 
 type merchantRepo struct {

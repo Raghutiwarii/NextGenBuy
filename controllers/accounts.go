@@ -33,7 +33,7 @@ type OnBoadingCustomerRequest struct {
 func OnBoardingCustomer(c *gin.Context) {
 	var (
 		req         = OnBoadingCustomerRequest{}
-		AccountRepo = models.InitAccountRepo(database.DB)
+		accountRepo = models.InitAccountRepo(database.DB)
 	)
 
 	// Bind JSON request body to the struct
@@ -64,7 +64,7 @@ func OnBoardingCustomer(c *gin.Context) {
 		return
 	}
 
-	existingAccount, err := AccountRepo.Get(&models.Account{
+	existingAccount, err := accountRepo.Get(&models.Account{
 		PhoneNumber: &req.PhoneNumber})
 
 	if err == nil || existingAccount != nil {
@@ -94,7 +94,7 @@ func OnBoardingCustomer(c *gin.Context) {
 		RoleID:   models.CustomerRole,
 	}
 
-	err = AccountRepo.Create(&newAccount)
+	err = accountRepo.Create(&newAccount)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errResponse.Generate(constants.ErrorDatabaseCreateFailed,
@@ -115,8 +115,8 @@ func OnBoardingCustomer(c *gin.Context) {
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 		Role:        models.GetRoleName(newAccount.RoleID),
-		IsPartial:   false,
-		AccountUUID: newAccount.UUID,
+		IsPartial:   utils.BoolPtr(true),
+		AccountUUID: newAccount.AccountId,
 	}, time.Now().Add(5*time.Minute))
 
 	if err != nil {
@@ -129,7 +129,7 @@ func OnBoardingCustomer(c *gin.Context) {
 
 	// Create OTP instance
 	otp := models.OTP{
-		AccountUUID: newAccount.UUID,
+		AccountUUID: newAccount.AccountId,
 		Code:        otpCode,
 		ExpiresAt:   time.Now().Add(time.Second * 50),
 	}
@@ -146,7 +146,7 @@ func OnBoardingCustomer(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message":      "User registered successfully",
-		"user_id":      newAccount.UUID,
+		"account_id":   newAccount.AccountId,
 		"access_token": token,
 	})
 }
@@ -222,8 +222,8 @@ func Login(c *gin.Context) {
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        models.GetRoleName(accountWithEmail.RoleID),
-			IsPartial:   false,
-			AccountUUID: accountWithEmail.UUID,
+			IsPartial:   utils.BoolPtr(false),
+			AccountUUID: accountWithEmail.AccountId,
 		}, time.Now().Add(5*time.Minute))
 
 		if err != nil {
@@ -261,8 +261,8 @@ func Login(c *gin.Context) {
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        models.GetRoleName(existingAccount.RoleID),
-			IsPartial:   false,
-			AccountUUID: existingAccount.UUID,
+			IsPartial:   utils.BoolPtr(false),
+			AccountUUID: existingAccount.AccountId,
 		}, time.Now().Add(5*time.Minute))
 
 		if err != nil {
@@ -382,7 +382,7 @@ func VerifyOTP(c *gin.Context) {
 
 			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 				Role:        role.(string),
-				IsPartial:   false,
+				IsPartial:   utils.BoolPtr(false),
 				AccountUUID: customer.AccountUUID,
 			}, time.Now().Add(60*60*time.Minute))
 
@@ -431,7 +431,7 @@ func VerifyOTP(c *gin.Context) {
 		if otp.Code == req.OTP {
 			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 				Role:        role.(string),
-				IsPartial:   false,
+				IsPartial:   utils.BoolPtr(false),
 				AccountUUID: merchant.AccountUUID,
 			}, time.Now().Add(60*60*time.Minute))
 
