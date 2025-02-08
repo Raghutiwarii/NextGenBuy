@@ -89,4 +89,5 @@ type IProductRepo interface {
 	UpdateWithTx(tx *gorm.DB, where *Product, p *Product) error
 	Get(where *Product) (*Product, error)
 	GetWithTx(tx *gorm.DB, where *Product) (*Product, error)
+	CreateInBatches(products []*Product, batchSize int, merchantID string) error
 }

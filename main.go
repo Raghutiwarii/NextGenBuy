@@ -75,6 +75,7 @@ func main() {
 
 	// profile
 	fullAuth.GET("/profile", controllers.GetProfile)
+	fullAuth.POST("/products/upload", controllers.BulkUploadProducts)
 
 	// Display banner in logs
 	banner := `

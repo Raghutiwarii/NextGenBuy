@@ -2,6 +2,7 @@ package models
 
 import (
 	utils "ecom/backend/utils"
+	"fmt"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -150,4 +151,33 @@ func (pr *productRepo) GetWithTx(tx *gorm.DB, where *Product) (*Product, error) 
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (pr *productRepo) CreateInBatches(products []*Product, batchSize int, merchantID string) error {
+	return pr.CreateInBatchesWithTx(pr.db, products, batchSize, merchantID)
+}
+
+func (pr *productRepo) CreateInBatchesWithTx(tx *gorm.DB, products []*Product, batchSize int, merchantID string) error {
+	if merchantID == "" {
+		return fmt.Errorf("merchantID cannot be empty")
+	}
+
+	// Set MerchantID for all products
+	for _, p := range products {
+		p.MerchantID = merchantID
+	}
+
+	err := tx.Model(&Product{}).
+		Clauses(clause.Returning{Columns: []clause.Column{
+			{Name: "uuid"},
+			{Name: "id"},
+		}}).
+		CreateInBatches(products, batchSize).Error
+
+	if err != nil {
+		utils.Error("unable to create products in batch ", err)
+		return err
+	}
+
+	return nil
 }

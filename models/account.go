@@ -1,10 +1,9 @@
 package models
 
 import (
+	"ecom/backend/utils"
 	"errors"
 	"time"
-
-	utils "ecom/backend/utils"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

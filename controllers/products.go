@@ -7,10 +7,15 @@ import (
 	"ecom/backend/middleware"
 	"ecom/backend/models"
 	"ecom/backend/utils"
+	"encoding/csv"
+	"fmt"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 )
 
 type ProdctRequest struct {
@@ -170,7 +175,7 @@ func GetProductDetails(c *gin.Context) {
 	)
 	productId := c.Param("product_id")
 	if productId == "" {
-		utils.Error("ach uuid cannot be empty")
+		utils.Error("product_id cannot be empty")
 		c.AbortWithStatusJSON(http.StatusBadRequest, errResponse.Generate(
 			constants.ErrorBadRequest,
 			"product id cannot be empty",
@@ -275,4 +280,173 @@ func ListFilteredActiveProducts(c *gin.Context) {
 
 	// Return response
 	c.JSON(http.StatusOK, productResponses)
+}
+
+// BulkUploadProducts handles bulk product upload via CSV or Excel
+func BulkUploadProducts(c *gin.Context) {
+	var (
+		merchantRepo = models.InitMerchantRepo(database.DB)
+		productRepo  = models.InitProductsRepo(database.DB)
+	)
+
+	// Get merchant UUID from the context (set by AuthMiddleware)
+	AccountUUIDStr, ok := c.Get(middleware.AccountUUIDContextKey)
+	if !ok || AccountUUIDStr == "" {
+		utils.Error("failed to get account uuid")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "failed to get account uuid",
+		})
+		return
+	}
+
+	merchantInfo, err := merchantRepo.Get(&models.Merchant{
+		AccountUUID: AccountUUIDStr.(string),
+	})
+
+	if err != nil || merchantInfo == nil {
+		utils.Error("error in getting merchant || err: ", err)
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "error in getting merchant",
+		})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve file"})
+		return
+	}
+
+	defer file.Close()
+
+	var products []models.Product
+	var failedRecords []map[string]string
+
+	switch {
+	case strings.HasSuffix(header.Filename, ".csv"):
+		utils.Info("get csv file: ", header.Filename)
+		products, failedRecords = parseCSV(file)
+	case strings.HasSuffix(header.Filename, ".xlsx"):
+		utils.Info("get xlsx file: ", header.Filename)
+		products, failedRecords = parseExcel(file)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only CSV or Excel files are supported"})
+		return
+	}
+
+	if len(products) > 0 {
+		// Convert the slice of Product structs to a slice of pointers
+		var productPtrs []*models.Product
+		for i := range products {
+			productPtrs = append(productPtrs, &products[i])
+		}
+
+		// Now pass the converted slice to CreateInBatches
+		result := productRepo.CreateInBatches(productPtrs, 50, merchantInfo.UUID)
+		if result != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert products"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":        fmt.Sprintf("%d products uploaded successfully", len(products)),
+		"failed_records": failedRecords,
+	})
+}
+
+// parseCSV reads and processes a CSV file
+func parseCSV(file multipart.File) ([]models.Product, []map[string]string) {
+	// Reset the file cursor before reading
+	file.Seek(0, 0)
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		utils.Error("CSV Read Error:", err)
+		return nil, []map[string]string{{"error": "Failed to read CSV file"}}
+	}
+
+	if len(records) < 2 {
+		return nil, []map[string]string{{"error": "CSV file must have at least one product row"}}
+	}
+
+	headers := records[0]
+	var products []models.Product
+	var failedRecords []map[string]string
+
+	for _, row := range records[1:] {
+		product, err := mapRowToProduct(headers, row)
+		if err != nil {
+			failedRecords = append(failedRecords, map[string]string{"error": err.Error()})
+			continue
+		}
+		products = append(products, product)
+	}
+
+	return products, failedRecords
+}
+
+// parseExcel reads and processes an Excel file
+func parseExcel(file multipart.File) ([]models.Product, []map[string]string) {
+	f, err := excelize.OpenReader(file)
+	if err != nil {
+		return nil, []map[string]string{{"error": "Failed to read Excel file"}}
+	}
+
+	sheetName := f.GetSheetName(1)
+	rows, err := f.GetRows(sheetName)
+	if err != nil || len(rows) < 2 {
+		return nil, []map[string]string{{"error": "Invalid Excel format"}}
+	}
+
+	headers := rows[0]
+	var products []models.Product
+	var failedRecords []map[string]string
+
+	for _, row := range rows[1:] {
+		product, err := mapRowToProduct(headers, row)
+		if err != nil {
+			failedRecords = append(failedRecords, map[string]string{"error": err.Error()})
+			continue
+		}
+		products = append(products, product)
+	}
+
+	return products, failedRecords
+}
+
+// mapRowToProduct maps a row of data to a Product struct
+func mapRowToProduct(headers, row []string) (models.Product, error) {
+	if len(headers) != len(row) {
+		return models.Product{}, fmt.Errorf("invalid row length")
+	}
+
+	productMap := make(map[string]string)
+	for i, header := range headers {
+		productMap[strings.ToLower(header)] = row[i]
+	}
+
+	price, err := strconv.ParseUint(productMap["price"], 10, 32)
+	if err != nil {
+		return models.Product{}, fmt.Errorf("invalid price value")
+	}
+
+	stock, err := strconv.ParseUint(productMap["stock"], 10, 32)
+	if err != nil {
+		return models.Product{}, fmt.Errorf("invalid stock value")
+	}
+
+	isActive := productMap["is_active"] == "true" || productMap["is_active"] == "TRUE"
+
+	return models.Product{
+		MerchantID:  productMap["merchant_id"],
+		Title:       productMap["title"],
+		Description: productMap["description"],
+		Price:       uint(price),
+		Stock:       uint(stock),
+		Category:    productMap["category"],
+		ImageURL:    productMap["imageurl"],
+		IsActive:    &isActive,
+	}, nil
 }
