@@ -60,8 +60,21 @@ func main() {
 
 	partialVerifyAccountV1Group.POST("/verify_account", controllers.VerifyOTP)
 
-	// secured.Use(middleware.AuthMiddleware())
-	// secured.GET("/user/profile", controllers.GetUserProfile)
+	merchantsFullAuthGroup := r.Group("",
+		middleware.AuthMiddleware([]byte(os.Getenv("SECRET")), false))
+
+	merchantsFullAuthGroup.POST("/product", controllers.CreateProduct)
+	merchantsFullAuthGroup.PUT("/product/:product_id", controllers.UpdateProduct)
+
+	noAuthGroup := r.Group("")
+	noAuthGroup.GET("/product/:product_id", controllers.GetProductDetails)
+	noAuthGroup.GET("/products", controllers.ListFilteredActiveProducts)
+
+	fullAuth := r.Group("",
+		middleware.AuthMiddleware([]byte(os.Getenv("SECRET")), false))
+
+	// profile
+	fullAuth.GET("/profile", controllers.GetProfile)
 
 	// Display banner in logs
 	banner := `

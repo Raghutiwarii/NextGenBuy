@@ -12,6 +12,7 @@ const (
 	ErrorInvalidCredentials    = 1009
 	ErrorTokenGenerationFailed = 1010
 	ErrorUnauthorized          = 1011
+	ErrorBadRequest            = 1012
 )
 
 func ErrorText(code int) string {
@@ -38,6 +39,8 @@ func ErrorText(code int) string {
 		return "Error while generating token"
 	case ErrorUnauthorized:
 		return "Unauthorized"
+	case ErrorBadRequest:
+		return "Bad request"
 	default:
 		return "Unknown error"
 	}

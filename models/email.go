@@ -10,16 +10,16 @@ import (
 )
 
 type Email struct {
-	ID        uint           `json:"id,omitempty" gorm:"primaryKey"`
-	CreatedAt *time.Time     `json:"created_at,omitempty"`
-	UpdatedAt *time.Time     `json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	ID        uint           `json:"-" gorm:"primaryKey"`
+	CreatedAt *time.Time     `json:"-"`
+	UpdatedAt *time.Time     `json:"-"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 
 	Email      string `json:"email" gorm:"unique;not null;"`
-	IsVerified *bool  `json:"is_verified" gorm:"default:false"`
-	Domain     string `json:"domain" gorm:"not null"`
+	IsVerified *bool  `json:"-" gorm:"default:false"`
+	Domain     string `json:"-" gorm:"not null"`
 
-	Accounts []*Account `gorm:"many2many:account_emails"`
+	Accounts []*Account `gorm:"many2many:account_emails" json:"-"`
 }
 
 func (e *Email) BeforeCreate(tx *gorm.DB) error {

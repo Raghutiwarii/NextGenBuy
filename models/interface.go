@@ -76,3 +76,17 @@ type IOTPRepo interface {
 	Update(where *OTP, o *OTP) error
 	UpdateWithTx(tx *gorm.DB, where *OTP, o *OTP) error
 }
+
+type IProductRepo interface {
+	Create(p *Product) error
+	CreateWithTx(tx *gorm.DB, p *Product) error
+	Delete(where *Product) error
+	DeleteWithTx(tx *gorm.DB, where *Product) error
+	GetByCategory(category string) ([]Product, error)
+	GetByID(id uint) (*Product, error)
+	GetByUUID(uuid string) (*Product, error)
+	Update(where *Product, p *Product) error
+	UpdateWithTx(tx *gorm.DB, where *Product, p *Product) error
+	Get(where *Product) (*Product, error)
+	GetWithTx(tx *gorm.DB, where *Product) (*Product, error)
+}

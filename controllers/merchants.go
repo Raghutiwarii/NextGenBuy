@@ -115,7 +115,7 @@ func OnBoardingMerchant(c *gin.Context) {
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 		Role:        models.GetRoleName(newAccount.RoleID),
-		IsPartial:   utils.BoolPtr(true),
+		IsPartial:   true,
 		AccountUUID: newAccount.AccountId,
 	}, time.Now().Add(60*60*time.Minute))
 

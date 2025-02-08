@@ -11,24 +11,24 @@ import (
 )
 
 type Account struct {
-	ID        uint           `json:"id,omitempty" gorm:"primaryKey"`
-	CreatedAt *time.Time     `json:"created_at,omitempty"`
-	UpdatedAt *time.Time     `json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	ID        uint           `json:"-" gorm:"primaryKey"`
+	CreatedAt *time.Time     `json:"-"`
+	UpdatedAt *time.Time     `json:"-"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 
 	AccountId           string  `gorm:"unique" json:"account_id,omitempty"`
 	FirstName           string  `json:"first_name"`
 	LastName            string  `json:"last_name"`
 	CountryCode         string  `gorm:"not null;default:+91" json:"country_code,omitempty"`
 	PhoneNumber         *string `gorm:"uniqueIndex:idx_unique_phone_email" json:"phone_number,omitempty"`
-	PhoneNumberVerified *bool   `json:"phone_number_verified" gorm:"default:false"`
+	PhoneNumberVerified *bool   `json:"-" gorm:"default:false"`
 
 	PrimaryEmailID *uint  `gorm:"uniqueIndex:idx_unique_phone_email" json:"-"`
 	PrimaryEmail   *Email `json:"primary_email,omitempty"`
 
 	Emails   []*Email `gorm:"many2many:account_emails" json:"emails,omitempty"`
-	RoleID   uint     `json:"role_id"`
-	Password string   `json:"password"`
+	RoleID   uint     `json:"-"`
+	Password string   `json:"-"`
 }
 
 func GetAccountByPhoneNumber(db *gorm.DB, phoneNumber string) (*Account, error) {

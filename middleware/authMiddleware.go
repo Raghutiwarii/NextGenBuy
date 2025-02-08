@@ -45,7 +45,7 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 
 		utils.Info("getting context role from token ", claims.Role)
 
-		if *claims.IsPartial && !allowPartial {
+		if claims.IsPartial && !allowPartial {
 			utils.Error("cannot mix tokentype partial with full auth scoped token")
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":       "invalid token",
@@ -54,7 +54,7 @@ func AuthMiddleware(secretKey []byte, allowPartial bool) gin.HandlerFunc {
 			return
 		}
 
-		if !(*claims.IsPartial) && allowPartial {
+		if !claims.IsPartial && allowPartial {
 			utils.Error("cannot mix tokentype partial with full auth scoped token")
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":       "invalid token",

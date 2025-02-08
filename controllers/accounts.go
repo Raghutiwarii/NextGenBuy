@@ -30,6 +30,20 @@ type OnBoadingCustomerRequest struct {
 	Password    string `json:"password" validate:"required"`
 }
 
+type ProfileResponse struct {
+	AccountId           string  `gorm:"unique" json:"account_id,omitempty"`
+	FirstName           string  `json:"first_name"`
+	LastName            string  `json:"last_name"`
+	CountryCode         string  `gorm:"not null;default:+91" json:"country_code,omitempty"`
+	PhoneNumber         *string `gorm:"uniqueIndex:idx_unique_phone_email" json:"phone_number,omitempty"`
+	PhoneNumberVerified *bool   `json:"phone_number_verified" gorm:"default:false"`
+
+	PrimaryEmailID *uint         `gorm:"uniqueIndex:idx_unique_phone_email" json:"-"`
+	PrimaryEmail   *models.Email `json:"primary_email,omitempty"`
+
+	Emails   []*models.Email `gorm:"many2many:account_emails" json:"emails,omitempty"`
+}
+
 func OnBoardingCustomer(c *gin.Context) {
 	var (
 		req         = OnBoadingCustomerRequest{}
@@ -115,7 +129,7 @@ func OnBoardingCustomer(c *gin.Context) {
 
 	token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 		Role:        models.GetRoleName(newAccount.RoleID),
-		IsPartial:   utils.BoolPtr(true),
+		IsPartial:   true,
 		AccountUUID: newAccount.AccountId,
 	}, time.Now().Add(5*time.Minute))
 
@@ -222,7 +236,7 @@ func Login(c *gin.Context) {
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        models.GetRoleName(accountWithEmail.RoleID),
-			IsPartial:   utils.BoolPtr(false),
+			IsPartial:   false,
 			AccountUUID: accountWithEmail.AccountId,
 		}, time.Now().Add(5*time.Minute))
 
@@ -261,7 +275,7 @@ func Login(c *gin.Context) {
 
 		token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 			Role:        models.GetRoleName(existingAccount.RoleID),
-			IsPartial:   utils.BoolPtr(false),
+			IsPartial:   false,
 			AccountUUID: existingAccount.AccountId,
 		}, time.Now().Add(5*time.Minute))
 
@@ -382,7 +396,7 @@ func VerifyOTP(c *gin.Context) {
 
 			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 				Role:        role.(string),
-				IsPartial:   utils.BoolPtr(false),
+				IsPartial:   false,
 				AccountUUID: customer.AccountUUID,
 			}, time.Now().Add(60*60*time.Minute))
 
@@ -431,7 +445,7 @@ func VerifyOTP(c *gin.Context) {
 		if otp.Code == req.OTP {
 			token, err := utils.NewTokenWithClaims(constants.JWT_SECRET, utils.CustomClaims{
 				Role:        role.(string),
-				IsPartial:   utils.BoolPtr(false),
+				IsPartial:   false,
 				AccountUUID: merchant.AccountUUID,
 			}, time.Now().Add(60*60*time.Minute))
 
@@ -453,4 +467,34 @@ func VerifyOTP(c *gin.Context) {
 	c.JSON(http.StatusForbidden, gin.H{
 		"message": "Invalid OTP",
 	})
+}
+
+func GetProfile(c *gin.Context) {
+	var (
+		accountRepo = models.InitAccountRepo(database.DB)
+	)
+
+	// Get merchant UUID from the context (set by AuthMiddleware)
+	AccountUUIDStr, ok := c.Get(middleware.AccountUUIDContextKey)
+	if !ok || AccountUUIDStr == "" {
+		utils.Error("failed to get account uuid")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "failed to get account uuid",
+		})
+		return
+	}
+
+	accountInfo, err := accountRepo.Get(&models.Account{
+		AccountId: AccountUUIDStr.(string),
+	})
+
+	if err != nil && accountInfo == nil {
+		utils.Error("failed to get account info")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "failed to get account info",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, accountInfo)
 }

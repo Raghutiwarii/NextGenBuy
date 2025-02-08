@@ -37,3 +37,9 @@ func InitOTPRepo(db *gorm.DB) IOTPRepo {
 		db: db,
 	}
 }
+
+func InitProductsRepo(db *gorm.DB) IProductRepo {
+	return &productRepo{
+		db: db,
+	}
+}
