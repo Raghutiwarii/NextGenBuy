@@ -16,28 +16,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
+	"gorm.io/datatypes"
 )
 
 type ProdctRequest struct {
-	UUID        string `gorm:"unique" json:"uuid,omitempty"`
-	Title       string `json:"title" gorm:"not null"`
-	Description string `json:"description,omitempty"`
-	Price       uint   `json:"price" gorm:"not null"`
-	Stock       uint   `json:"stock" gorm:"default:0"`
-	Category    string `json:"category"`
-	ImageURL    string `json:"image_url,omitempty"`
-	IsActive    *bool  `json:"is_active" gorm:"default:false"`
+	UUID           string         `gorm:"unique" json:"uuid,omitempty"`
+	Title          string         `json:"title" gorm:"not null"`
+	Description    string         `json:"description,omitempty"`
+	Price          uint           `json:"price" gorm:"not null"`
+	Stock          uint           `json:"stock" gorm:"default:0"`
+	Category       string         `json:"category"`
+	ImageURL       string         `json:"image_url,omitempty"`
+	IsActive       *bool          `json:"is_active" gorm:"default:false"`
+	Specifications datatypes.JSON `json:"specifications" gorm:"type:jsonb"`
 }
 
 type ProductDetailsResponse struct {
-	UUID        string `gorm:"unique" json:"uuid,omitempty"`
-	Title       string `json:"title" gorm:"not null"`
-	Description string `json:"description,omitempty"`
-	Price       uint   `json:"price" gorm:"not null"`
-	Stock       uint   `json:"stock" gorm:"default:0"`
-	Category    string `json:"category"`
-	ImageURL    string `json:"image_url,omitempty"`
-	IsActive    *bool  `json:"is_active,omitempty" gorm:"default:false"`
+	UUID           string         `gorm:"unique" json:"uuid,omitempty"`
+	Title          string         `json:"title" gorm:"not null"`
+	Description    string         `json:"description,omitempty"`
+	Price          uint           `json:"price" gorm:"not null"`
+	Stock          uint           `json:"stock" gorm:"default:0"`
+	Category       string         `json:"category"`
+	ImageURL       string         `json:"image_url,omitempty"`
+	IsActive       *bool          `json:"is_active,omitempty" gorm:"default:false"`
+	Specifications datatypes.JSON `json:"specifications" gorm:"type:jsonb"`
 }
 
 func CreateProduct(c *gin.Context) {
@@ -78,14 +81,15 @@ func CreateProduct(c *gin.Context) {
 
 	// Create a new product
 	product := models.Product{
-		Title:       request.Title,
-		Description: request.Description,
-		Price:       request.Price,
-		Stock:       request.Stock,
-		Category:    request.Category,
-		ImageURL:    request.ImageURL,
-		MerchantID:  merchantInfo.UUID,
-		IsActive:    request.IsActive,
+		Title:          request.Title,
+		Description:    request.Description,
+		Price:          request.Price,
+		Stock:          request.Stock,
+		Category:       request.Category,
+		ImageURL:       request.ImageURL,
+		MerchantID:     merchantInfo.UUID,
+		IsActive:       request.IsActive,
+		Specifications: request.Specifications,
 	}
 
 	// Create the product
@@ -146,13 +150,14 @@ func UpdateProduct(c *gin.Context) {
 
 	// Create a new product
 	product := models.Product{
-		Title:       request.Title,
-		Description: request.Description,
-		Price:       request.Price,
-		Stock:       request.Stock,
-		Category:    request.Category,
-		ImageURL:    request.ImageURL,
-		IsActive:    request.IsActive,
+		Title:          request.Title,
+		Description:    request.Description,
+		Price:          request.Price,
+		Stock:          request.Stock,
+		Category:       request.Category,
+		ImageURL:       request.ImageURL,
+		IsActive:       request.IsActive,
+		Specifications: request.Specifications,
 	}
 
 	// Create the product
@@ -170,8 +175,7 @@ func UpdateProduct(c *gin.Context) {
 }
 func GetProductDetails(c *gin.Context) {
 	var (
-		productRepo  = models.InitProductsRepo(database.DB)
-		merchantRepo = models.InitMerchantRepo(database.DB)
+		productRepo = models.InitProductsRepo(database.DB)
 	)
 	productId := c.Param("product_id")
 	if productId == "" {
@@ -184,31 +188,8 @@ func GetProductDetails(c *gin.Context) {
 		return
 	}
 
-	// Get merchant UUID from the context (set by AuthMiddleware)
-	AccountUUIDStr, ok := c.Get(middleware.AccountUUIDContextKey)
-	if !ok || AccountUUIDStr == "" {
-		utils.Error("failed to get account uuid")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "failed to get account uuid",
-		})
-		return
-	}
-
-	merchantInfo, err := merchantRepo.Get(&models.Merchant{
-		AccountUUID: AccountUUIDStr.(string),
-	})
-
-	if err != nil || merchantInfo == nil {
-		utils.Error("error in getting merchant || err: ", err)
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "error in getting merchant",
-		})
-		return
-	}
-
 	product, err := productRepo.Get(&models.Product{
-		UUID:       productId,
-		MerchantID: merchantInfo.UUID,
+		UUID: productId,
 	})
 
 	if err != nil || product == nil {
@@ -220,13 +201,14 @@ func GetProductDetails(c *gin.Context) {
 	}
 
 	productDetails := ProductDetailsResponse{
-		Title:       product.Title,
-		Description: product.Description,
-		Price:       product.Price,
-		Stock:       product.Stock,
-		Category:    product.Category,
-		ImageURL:    product.ImageURL,
-		IsActive:    product.IsActive,
+		Title:          product.Title,
+		Description:    product.Description,
+		Price:          product.Price,
+		Stock:          product.Stock,
+		Category:       product.Category,
+		ImageURL:       product.ImageURL,
+		IsActive:       product.IsActive,
+		Specifications: product.Specifications,
 	}
 
 	c.JSON(http.StatusOK, productDetails)
@@ -269,12 +251,14 @@ func ListFilteredActiveProducts(c *gin.Context) {
 	var productResponses []ProductDetailsResponse
 	for _, product := range products {
 		productResponses = append(productResponses, ProductDetailsResponse{
-			Title:       product.Title,
-			Description: product.Description,
-			Price:       product.Price,
-			Stock:       product.Stock,
-			Category:    product.Category,
-			ImageURL:    product.ImageURL,
+			UUID:           product.UUID,
+			Title:          product.Title,
+			Description:    product.Description,
+			Price:          product.Price,
+			Stock:          product.Stock,
+			Category:       product.Category,
+			ImageURL:       product.ImageURL,
+			Specifications: product.Specifications,
 		})
 	}
 
@@ -440,13 +424,14 @@ func mapRowToProduct(headers, row []string) (models.Product, error) {
 	isActive := productMap["is_active"] == "true" || productMap["is_active"] == "TRUE"
 
 	return models.Product{
-		MerchantID:  productMap["merchant_id"],
-		Title:       productMap["title"],
-		Description: productMap["description"],
-		Price:       uint(price),
-		Stock:       uint(stock),
-		Category:    productMap["category"],
-		ImageURL:    productMap["imageurl"],
-		IsActive:    &isActive,
+		MerchantID:     productMap["merchant_id"],
+		Title:          productMap["title"],
+		Description:    productMap["description"],
+		Price:          uint(price),
+		Stock:          uint(stock),
+		Category:       productMap["category"],
+		ImageURL:       productMap["imageurl"],
+		Specifications: datatypes.JSON([]byte(productMap["specifications"])),
+		IsActive:       &isActive,
 	}, nil
 }

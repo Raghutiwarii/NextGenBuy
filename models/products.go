@@ -4,21 +4,23 @@ import (
 	utils "ecom/backend/utils"
 	"fmt"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type Product struct {
 	gorm.Model
-	UUID        string `gorm:"unique" json:"uuid,omitempty"`
-	MerchantID  string `json:"merchant_id" gorm:"index"`
-	Title       string `json:"title" gorm:"not null"`
-	Description string `json:"description,omitempty"`
-	Price       uint   `json:"price" gorm:"not null"`
-	Stock       uint   `json:"stock" gorm:"default:0"`
-	Category    string `json:"category"`
-	ImageURL    string `json:"image_url,omitempty"`
-	IsActive    *bool  `json:"is_active" gorm:"default:false"`
+	UUID           string         `gorm:"unique" json:"uuid,omitempty"`
+	MerchantID     string         `json:"merchant_id" gorm:"index"`
+	Title          string         `json:"title" gorm:"not null"`
+	Description    string         `json:"description,omitempty"`
+	Price          uint           `json:"price" gorm:"not null"`
+	Stock          uint           `json:"stock" gorm:"default:0"`
+	Category       string         `json:"category"`
+	ImageURL       string         `json:"image_url,omitempty"`
+	IsActive       *bool          `json:"is_active" gorm:"default:false"`
+	Specifications datatypes.JSON `json:"specifications" gorm:"type:jsonb"`
 	// Offers      []Offer  `json:"offers,omitempty" gorm:"foreignKey:UUID;references:ProductID"`
 	Merchant Merchant `json:"merchant,omitempty" gorm:"foreignKey:MerchantID;references:UUID"`
 }

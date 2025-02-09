@@ -14,5 +14,4 @@ type Offer struct {
 	ExpiresAt   time.Time `json:"expires_at,omitempty"`
 	Description string    `json:"description,omitempty"`
 	IsActive    bool      `json:"is_active" gorm:"default:false"`
-	// Product     Product   `json:"product,omitempty" gorm:"foreignKey:ProductID"`
 }
