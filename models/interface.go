@@ -91,3 +91,11 @@ type IProductRepo interface {
 	GetWithTx(tx *gorm.DB, where *Product) (*Product, error)
 	CreateInBatches(products []*Product, batchSize int, merchantID string) error
 }
+
+type ICheckoutRepo interface {
+	Create(c *Checkout) error
+	CreateWithTx(tx *gorm.DB, c *Checkout) error
+	GetByID(checkoutId string) (*Checkout, error)
+	Get(where *Checkout) (*Checkout, error)
+	GetWithTx(tx *gorm.DB, where *Checkout) (*Checkout, error)
+}

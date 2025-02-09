@@ -59,8 +59,6 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	utils.Info("merchant uuid ", AccountUUIDStr.(string), " ", ok)
-
 	// Bind the request body to the Product model
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload"})

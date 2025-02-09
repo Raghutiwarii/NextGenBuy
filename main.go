@@ -73,9 +73,12 @@ func main() {
 	fullAuth := r.Group("",
 		middleware.AuthMiddleware([]byte(os.Getenv("SECRET")), false))
 
+	fullAuth.POST("/product/checkout", controllers.CreateCheckout)
+
 	// profile
 	fullAuth.GET("/profile", controllers.GetProfile)
 	fullAuth.POST("/products/upload", controllers.BulkUploadProducts)
+	fullAuth.POST("/checkout/complete", controllers.CompleteCheckout)
 
 	// Display banner in logs
 	banner := `
