@@ -81,6 +81,6 @@ yarn start
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## This is a personal project for learning purpose and implementing all services of my own, for now going with monothil approach, ik microservices approches too
+## This is a personal project for learning purpose and implementing all services of my own, for now going with monolithic approach, ik microservices approches too
 
 Note - some endpoints are yet to be implemented  
