@@ -83,78 +83,87 @@ func CreateCheckout(c *gin.Context) {
 // CompleteCheckout handles checkout completion after successful payment
 func CompleteCheckout(c *gin.Context) {
 	var (
-		reqeust   = CompleteCheckoutRequest{}
-		orderRepo = models.InitOrdersrepo(database.DB)
+		request      = CompleteCheckoutRequest{}
+		orderRepo    = models.InitOrdersrepo(database.DB)
+		checkoutRepo = models.InitCheckoutrepo(database.DB)
 	)
-	if err := c.ShouldBindJSON(&reqeust); err != nil {
+
+	// Bind the request body
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "details": err.Error()})
 		return
 	}
 
-	db := database.DB
-	var checkout models.Checkout
+	// Start a transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
 	// Fetch the checkout record
-	if err := db.Preload("CheckoutItems").Where("checkout_id = ?", reqeust.CheckoutID).First(&checkout).Error; err != nil {
+	checkout, err := checkoutRepo.GetWithTx(tx, &models.Checkout{CheckoutID: request.CheckoutID})
+	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusNotFound, gin.H{"error": "Checkout not found"})
 		return
 	}
 
 	// Ensure checkout is still pending
 	if checkout.Status != models.CheckoutStatusPending {
+		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Checkout is not in a valid state for completion"})
 		return
 	}
 
 	// Validate payment reference ID (mock verification here)
-	if reqeust.PaymentReferenceID == "" {
+	if request.PaymentReferenceID == "" {
+		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payment reference ID"})
 		return
 	}
 
-	txx := db.Begin()
-	// Use transaction to ensure atomicity
-	err := db.Transaction(func(tx *gorm.DB) error {
-		// Deduct stock for each product
-		for _, item := range checkout.CheckoutItems {
-			if err := tx.Model(&models.Product{}).
-				Where("id = ?", item.ProductID).
-				Update("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
-				txx.Rollback()
-				utils.Error("unable to update stock", err)
-				return err
-			}
+	// Deduct stock for each product in the checkout
+	for _, item := range checkout.CheckoutItems {
+		if err := tx.Model(&models.Product{}).
+			Where("id = ?", item.ProductID).
+			Update("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
+			tx.Rollback()
+			utils.Error("unable to update stock", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Checkout completion failed", "details": err.Error()})
+			return
 		}
+	}
 
-		// Update checkout status to completed
-		if err := tx.Model(&checkout).Update("status", models.CheckoutStatusCompleted).Error; err != nil {
-			txx.Rollback()
-			utils.Error("unable to update checkout status", err)
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		txx.Rollback()
+	// Update checkout status to completed
+	if err := tx.Model(&checkout).Update("status", models.CheckoutStatusCompleted).Error; err != nil {
+		tx.Rollback()
+		utils.Error("unable to update checkout status", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Checkout completion failed", "details": err.Error()})
 		return
 	}
 
-	err = orderRepo.Create(&models.Order{
+	// Create order record
+	if err := orderRepo.CreateWithTx(tx, &models.Order{
 		CheckoutID:       checkout.CheckoutID,
 		UserID:           checkout.UserID,
 		TotalOrderAmount: checkout.TotalAmount,
-		PaymentID:        reqeust.PaymentReferenceID,
-	})
-
-	if err != nil {
-		txx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Order creation failed", "details": err.Error()})
+		PaymentID:        request.PaymentReferenceID,
+	}); err != nil {
+		tx.Rollback()
+		utils.Error("order creation failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Checkout completion failed", "details": err.Error()})
 		return
 	}
 
-	txx.Commit()
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		utils.Error("unable to commit transaction", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Checkout completion failed", "details": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Checkout completed successfully", "checkout_id": checkout.CheckoutID})
 }
