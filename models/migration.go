@@ -13,6 +13,7 @@ var migrationModels = []interface{}{
 	&Offer{},
 	&Checkout{},
 	&CheckoutItem{},
+	&Order{},
 }
 
 func GetMigrationModels() []interface{} {

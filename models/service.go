@@ -49,3 +49,9 @@ func InitCheckoutrepo(db *gorm.DB) ICheckoutRepo {
 		db: db,
 	}
 }
+
+func InitOrdersrepo(db *gorm.DB) IOrderRepo {
+	return &OrderRepo{
+		db: db,
+	}
+}

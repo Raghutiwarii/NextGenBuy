@@ -16,12 +16,12 @@ type Order struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 	UUID      string         `gorm:"unique" json:"uuid,omitempty"`
 
-	PaymentID      string `json:"-"`
-	UserID             int    `json:"-"`
+	PaymentID          string `json:"-"`
+	UserID             string `json:"-"`
 	MerchantID         int    `json:"-"`
-	CheckoutID         int    `json:"checkout_id,omitempty"`
+	CheckoutID         string `json:"checkout_id,omitempty"`
 	NetAmountInCents   int    `json:"net_amount_in_cents,omitempty"`
-	TotalAmountInCents int    `json:"total_amount_in_cents,omitempty"`
+	TotalOrderAmount   int    `json:"total_order_amount,omitempty"`
 	GrossAmountInCents int    `json:"gross_amount_in_cents,omitempty"`
 	PurchaseProductID  int    `json:"purchase_product_id,omitempty"`
 	BankAccountID      string `json:"bank_account_id"`

@@ -99,3 +99,16 @@ type ICheckoutRepo interface {
 	Get(where *Checkout) (*Checkout, error)
 	GetWithTx(tx *gorm.DB, where *Checkout) (*Checkout, error)
 }
+
+type IOrderRepo interface {
+	Create(o *Order) error
+	CreateWithTx(tx *gorm.DB, o *Order) error
+	Get(where *Order) (*Order, error)
+	GetWithTx(tx *gorm.DB, where *Order) (*Order, error)
+	GetWithPreloads(where *Order) (*Order, error)
+	GetCount(where *Order) (int, error)
+	GetTotalOfferAmount(where *Order) (*int64, error)
+	Update(where *Order, c *Order) error
+	UpdateWithTx(tx *gorm.DB, where *Order, c *Order) error
+	GetOrderWithIds(ids []int) (*[]string, error)
+}

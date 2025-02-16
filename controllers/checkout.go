@@ -83,7 +83,8 @@ func CreateCheckout(c *gin.Context) {
 // CompleteCheckout handles checkout completion after successful payment
 func CompleteCheckout(c *gin.Context) {
 	var (
-		reqeust = CompleteCheckoutRequest{}
+		reqeust   = CompleteCheckoutRequest{}
+		orderRepo = models.InitOrdersrepo(database.DB)
 	)
 	if err := c.ShouldBindJSON(&reqeust); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "details": err.Error()})
@@ -111,6 +112,7 @@ func CompleteCheckout(c *gin.Context) {
 		return
 	}
 
+	txx := db.Begin()
 	// Use transaction to ensure atomicity
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// Deduct stock for each product
@@ -118,6 +120,7 @@ func CompleteCheckout(c *gin.Context) {
 			if err := tx.Model(&models.Product{}).
 				Where("id = ?", item.ProductID).
 				Update("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
+				txx.Rollback()
 				utils.Error("unable to update stock", err)
 				return err
 			}
@@ -125,6 +128,7 @@ func CompleteCheckout(c *gin.Context) {
 
 		// Update checkout status to completed
 		if err := tx.Model(&checkout).Update("status", models.CheckoutStatusCompleted).Error; err != nil {
+			txx.Rollback()
 			utils.Error("unable to update checkout status", err)
 			return err
 		}
@@ -133,9 +137,24 @@ func CompleteCheckout(c *gin.Context) {
 	})
 
 	if err != nil {
+		txx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Checkout completion failed", "details": err.Error()})
 		return
 	}
 
+	err = orderRepo.Create(&models.Order{
+		CheckoutID:       checkout.CheckoutID,
+		UserID:           checkout.UserID,
+		TotalOrderAmount: checkout.TotalAmount,
+		PaymentID:        reqeust.PaymentReferenceID,
+	})
+
+	if err != nil {
+		txx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Order creation failed", "details": err.Error()})
+		return
+	}
+
+	txx.Commit()
 	c.JSON(http.StatusOK, gin.H{"message": "Checkout completed successfully", "checkout_id": checkout.CheckoutID})
 }
