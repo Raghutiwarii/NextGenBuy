@@ -16,21 +16,17 @@ type Order struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 	UUID      string         `gorm:"unique" json:"uuid,omitempty"`
 
-	PaymentID          string `json:"-"`
-	UserID             string `json:"-"`
-	MerchantID         int    `json:"-"`
-	CheckoutID         string `json:"checkout_id,omitempty"`
-	NetAmountInCents   int    `json:"net_amount_in_cents,omitempty"`
-	TotalOrderAmount   int    `json:"total_order_amount,omitempty"`
-	GrossAmountInCents int    `json:"gross_amount_in_cents,omitempty"`
-	PurchaseProductID  int    `json:"purchase_product_id,omitempty"`
-	BankAccountID      string `json:"bank_account_id"`
-	OfferID            *int   `json:"-"`
+	PaymentID         string `json:"-"`
+	UserID            string `json:"-"`
+	CheckoutID        string `json:"checkout_id,omitempty"`
+	TotalOrderAmount  int    `json:"total_order_amount,omitempty"`
+	PurchaseProductID int    `json:"purchase_product_id,omitempty"`
+	BankAccountID     string `json:"bank_account_id"`
+	// OfferID            *int   `json:"-"`
 
-	Checkout Checkout `gorm:"foreignKey:CheckoutID" json:"checkout,omitempty"`
-	Merchant Merchant `gorm:"foreignKey:MerchantID" json:"merchant,omitempty"`
-	User     Account  `gorm:"foreignKey:UserID" json:"-"`
-	Offer    *Offer   `gorm:"foreignKey:OfferID" json:"offer"`
+	Checkout Checkout `gorm:"foreignKey:CheckoutID;references:CheckoutID" json:"checkout,omitempty"`
+	// User     Account  `gorm:"foreignKey:UserID;references:AccountId" json:"-"`
+	// Offer    *Offer   `gorm:"foreignKey:OfferID" json:"offer"`
 }
 
 func (o *Order) BeforeCreate(tx *gorm.DB) error {
