@@ -79,6 +79,7 @@ func main() {
 	fullAuth.GET("/profile", controllers.GetProfile)
 	fullAuth.POST("/products/upload", controllers.BulkUploadProducts)
 	fullAuth.POST("/checkout/complete", controllers.CompleteCheckout)
+	fullAuth.GET("/checkout/:checkout_id", controllers.GetCheckoutDetails)
 
 	// Display banner in logs
 	banner := `

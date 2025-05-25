@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"ecom/backend/constants"
 	"ecom/backend/database"
+	"ecom/backend/errResponse"
 	"ecom/backend/middleware"
 	"ecom/backend/models"
 	"ecom/backend/utils"
@@ -22,6 +24,15 @@ type CheckoutRequest struct {
 type CompleteCheckoutRequest struct {
 	CheckoutID         string `json:"checkout_id" binding:"required"`
 	PaymentReferenceID string `json:"payment_reference_id" binding:"required"`
+}
+
+type CheckoutDetailResponse struct {
+	CheckoutID  string                `json:"checkout_id"`
+	CreatedAt   string                `json:"created_at"`
+	UpdatedAt   string                `json:"updated_at"`
+	TotalAmount uint                  `json:"total_amount"`
+	Status      string                `json:"status"`
+	Prouducts   []models.CheckoutItem `json:"products"`
 }
 
 // CreateCheckout handles checkout creation
@@ -78,6 +89,55 @@ func CreateCheckout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Checkout created successfully", "checkout_id": checkout.CheckoutID})
+}
+
+func GetCheckoutDetails(c *gin.Context) {
+	var (
+		checkoutRepo = models.InitCheckoutrepo(database.DB)
+	)
+	checkoutId := c.Param("checkout_id")
+	if checkoutId == "" {
+		utils.Error("checkout id cannot be empty")
+		c.AbortWithStatusJSON(http.StatusBadRequest, errResponse.Generate(
+			constants.ErrorBadRequest,
+			"checkout id cannot be empty",
+			constants.ErrorBadRequest,
+		))
+		return
+	}
+
+	// Get merchant UUID from the context (set by AuthMiddleware)
+	AccountUUIDStr, ok := c.Get(middleware.AccountUUIDContextKey)
+	if !ok || AccountUUIDStr == "" {
+		utils.Error("failed to get account uuid")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "failed to get account uuid",
+		})
+		return
+	}
+
+	checkout, err := checkoutRepo.Get(&models.Checkout{
+		CheckoutID: checkoutId,
+	})
+
+	if err != nil || checkout == nil {
+		utils.Error("error in getting checkout || err: ", err)
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "error in getting checkout",
+		})
+		return
+	}
+
+	response := CheckoutDetailResponse{
+		CreatedAt:   checkout.CreatedAt.Local().String(),
+		UpdatedAt:   checkout.UpdatedAt.Local().String(),
+		CheckoutID:  checkoutId,
+		TotalAmount: uint(checkout.TotalAmount),
+		Status:      string(checkout.Status),
+		Prouducts:   checkout.CheckoutItems,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // CompleteCheckout handles checkout completion after successful payment
